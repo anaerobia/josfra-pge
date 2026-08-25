@@ -1,0 +1,16 @@
+#!/bin/bash
+DIR=`dirname $0`
+
+PYTHON_HOME=/opt/python/ops/envs/josfra_02
+#PYTHON_HOME=/home/goodman/opt/
+#PYTHON_HOME=/opt/python/python-3.7
+export PGS_LEAPSEC_FILE=$PGSHOME/database/common/TD/leapsec.dat
+export PATH=$PYTHON_HOME/bin:$PATH
+
+# To make numpy single-threaded
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+python $DIR/josfra_main.py $1

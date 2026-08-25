@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<input xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:xalan="http://xml.apache.org/xslt"
+       xmlns:cas="http://oodt.jpl.nasa.gov/1.0/cas"
+       xsi:noNamespaceSchemaLocation="/home/albertli/deploy/spdc/met_extractors/v00_01_00/static/SNDR.SchemaParameterfile.060401120000.xsd">
+   <group name="GranuleIdentification">
+      <scalar name="StartGranuleNumber">144</scalar>
+      <scalar name="EndDateTime">2014-06-01T14:29:22.999Z</scalar>
+      <scalar name="StartDateTime">2014-06-01T14:23:23.000Z</scalar>
+   </group>
+   <group name="JobIdentification">
+      <scalar name="ProductionLocation">JPL/Caltech Sounder SIPS Integration</scalar>
+      <scalar name="RequestId">222</scalar>
+      <scalar name="TaskId">e19886f9-e83a-4cef-8325-b713101c6d52</scalar>
+      <scalar name="ModelId">urn:npp:AIRSJosfraL1cNew</scalar>
+      <scalar name="ProductionLocationCode">I</scalar>
+      <scalar name="ProductionDateTime">260825173726</scalar>
+      <scalar name="JobId">058a2b2c-21ea-407a-b8fb-c35a8027628a</scalar>
+   </group>
+   <group name="SCFIdentification">
+      <scalar name="SubCollection">v02_24_00</scalar>
+      <scalar name="CollectionLabel">std</scalar>
+      <scalar name="NodeInfo">smog.jpl.nasa.gov</scalar>
+      <scalar name="Collection">production</scalar>
+      <scalar name="DataGroup">sndr</scalar>
+      <scalar name="DataProvider">albertli</scalar>
+   </group>
+   <group name="MonitorGroup">
+      <scalar name="MonitorPath">[NamingConv/RunInDir]/LogFiles</scalar>
+      <scalar name="CaptureLogMessagesSwitch">ON</scalar>
+      <scalar name="EchoToScreenSwitch">OFF</scalar>
+      <scalar name="MonitorSwitch">OFF</scalar>
+      <scalar name="MonitorFilenameFormat">SNDR.AQUA.AIRS.20140601T1423.m06.g144.JOSFRA.std.v02_24_00.I.260825173726.mon</scalar>
+   </group>
+   <group name="DynamicAuxiliaryInputFiles">
+      <scalar name="AVN_HDF_1_DEG_T06Z_F06">/dom/files/ops/correl/grid/2014/06/avi6_anh/NCEP.2014.06.01.T12Z.gblav_PHdfF06.A14152023619.hdf</scalar>
+      <scalar name="AVN_HDF_1_DEG_T06Z_F09">/dom/files/ops/correl/grid/2014/06/avi9_anh/NCEP.2014.06.01.T15Z.gblav_PHdfF09.A14152023432.hdf</scalar>
+   </group>
+   <group name="ProductPathGroup">
+      <scalar name="ProductPath">/home/albertli/deploy/pge_exe_dir/AIRSJosfra/2026-08-25_subm/2014-06-01_nom/SNDR.AQUA.AIRS.20140601T1423.m06.g144.JOSFRA.std.v02_24_00.I.260825173726</scalar>
+   </group>
+   <group name="PGEControl">
+      <scalar name="NumThreadSci">6</scalar>
+   </group>
+   <group name="LogMetadata">
+      <scalar name="ProcessingNode">smog.jpl.nasa.gov</scalar>
+   </group>
+   <group name="InputProductFiles">
+      <scalar name="AirsL1cFile">/dom/files/ops/airs/gdaac/v6.7/2014/06/01/airicrad/AIRS.2014.06.01.144.L1C.AIRS_Rad.v6.7.2.0.G20024123237.hdf</scalar>
+      <scalar name="AirsMoccaFile">/archive/AIRSSIPSOps/sndr/production/v02_67_00/2014/06/01/aqua_l2_mocca/AIRS.AQUA.MODIS.20140601T1423.m06.g144.L2_MOCCA.std.v02_67_00.J.251127070209.nc</scalar>
+   </group>
+   <group name="StaticFileIdentificationFiles">
+      <scalar name="SFIFFilename">/home/albertli/deploy/sips/airs_josfra/v04_00_00/config/SNDR.AQUA.JOSFRA.L2.sfif.202607310000.xml</scalar>
+   </group>
+   <group name="PrimaryExecutable">
+      <scalar name="FullPathname">/home/albertli/deploy/sips/airs_josfra/v04_00_00/scripts/josfra_spdc.sh</scalar>
+      <scalar name="Version">v02_24_00</scalar>
+   </group>
+   <group name="DOIIdentification">
+      <scalar name="identifier_product_doi">Unassigned</scalar>
+      <scalar name="naming_authority">None</scalar>
+   </group>
+   <group name="PGENameGroup">
+      <scalar name="PGEName">L2Pge</scalar>
+   </group>
+</input>
