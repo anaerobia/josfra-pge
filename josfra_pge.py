@@ -8,9 +8,12 @@ from __future__ import annotations
 
 import argparse
 import logging
+import tempfile
+import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
 from netCDF4 import Dataset
 
@@ -57,6 +60,50 @@ def get_group_scalars(root: ET.Element, group_name: str) -> dict[str, str]:
     if group is None:
         raise ValueError(f"Group not found in config: {group_name}")
     return {scalar.get("name", ""): scalar.text or "" for scalar in group.findall("scalar")}
+
+
+def is_url(source: str) -> bool:
+    """Check whether a config source string is an HTTP(S) URL.
+
+    Args:
+        source: The config_file argument as passed on the command line.
+
+    Returns:
+        True if source has an http or https scheme, False otherwise.
+    """
+    return urlparse(source).scheme in ("http", "https")
+
+
+def resolve_raw_url(url: str) -> str:
+    """Rewrite a GitHub "blob" URL to its raw content URL.
+
+    Args:
+        url: The original URL, possibly a GitHub file view URL.
+
+    Returns:
+        A URL that serves the raw file content. Non-GitHub-blob URLs
+        are returned unchanged.
+    """
+    parsed = urlparse(url)
+    if parsed.netloc == "github.com" and "/blob/" in parsed.path:
+        raw_path = parsed.path.replace("/blob/", "/", 1)
+        return f"https://raw.githubusercontent.com{raw_path}"
+    return url
+
+
+def download_config(url: str) -> Path:
+    """Download a config file from a URL to a local temp file.
+
+    Args:
+        url: HTTP(S) URL to the config file.
+
+    Returns:
+        Path to the downloaded local copy of the config file.
+    """
+    raw_url = resolve_raw_url(url)
+    local_path = Path(tempfile.gettempdir()) / Path(urlparse(raw_url).path).name
+    urllib.request.urlretrieve(raw_url, local_path)
+    return local_path
 
 
 def build_output_basename(root: ET.Element) -> str:
@@ -130,12 +177,19 @@ def write_cas_file(root: ET.Element, output_path: Path) -> None:
 def main() -> None:
     """Parse arguments, process the config file, and write PGE outputs."""
     parser = argparse.ArgumentParser(description="JOSFRA PGE for MAAP DPS")
-    parser.add_argument("config_file", type=Path, help="Path to the PGE XML config file")
+    parser.add_argument(
+        "config_file", help="Path or URL to the PGE XML config file"
+    )
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(exist_ok=True)
 
-    root = ET.parse(args.config_file).getroot()
+    if is_url(args.config_file):
+        config_path = download_config(args.config_file)
+    else:
+        config_path = Path(args.config_file)
+
+    root = ET.parse(config_path).getroot()
     basename = build_output_basename(root)
 
     log_path = OUTPUT_DIR / f"{basename}.log"
@@ -146,6 +200,8 @@ def main() -> None:
     )
 
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
+    if is_url(args.config_file):
+        logging.info("Downloaded config to local copy: %s", config_path)
 
     nc_path = OUTPUT_DIR / f"{basename}.nc"
     write_netcdf(root, nc_path)
