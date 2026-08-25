@@ -106,6 +106,35 @@ def download_config(url: str) -> Path:
     return local_path
 
 
+def resolve_config_path(source: str) -> Path:
+    """Resolve the config_file argument to a concrete local XML file path.
+
+    Handles three cases: an HTTP(S) URL (downloaded first); a directory
+    (MAAP DPS localizes "file" type inputs into the job's working
+    directory and passes that directory, often ".", instead of the
+    original URL or filename); and a direct path to the config file.
+
+    Args:
+        source: The config_file argument as passed on the command line.
+
+    Returns:
+        Path to the local config XML file to parse.
+
+    Raises:
+        FileNotFoundError: If source is a directory with no config file in it.
+    """
+    if is_url(source):
+        return download_config(source)
+
+    path = Path(source)
+    if path.is_dir():
+        candidates = sorted(path.glob("*.config.txt"))
+        if not candidates:
+            raise FileNotFoundError(f"No *.config.txt file found in {path}")
+        return candidates[0]
+    return path
+
+
 def build_output_basename(root: ET.Element) -> str:
     """Derive the shared output product basename from the config.
 
@@ -184,10 +213,7 @@ def main() -> None:
 
     OUTPUT_DIR.mkdir(exist_ok=True)
 
-    if is_url(args.config_file):
-        config_path = download_config(args.config_file)
-    else:
-        config_path = Path(args.config_file)
+    config_path = resolve_config_path(args.config_file)
 
     root = ET.parse(config_path).getroot()
     basename = build_output_basename(root)
@@ -200,8 +226,8 @@ def main() -> None:
     )
 
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
-    if is_url(args.config_file):
-        logging.info("Downloaded config to local copy: %s", config_path)
+    if config_path != Path(args.config_file):
+        logging.info("Resolved config to local file: %s", config_path)
 
     nc_path = OUTPUT_DIR / f"{basename}.nc"
     write_netcdf(root, nc_path)
