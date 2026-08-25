@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
+import boto3
 from netCDF4 import Dataset
 
 OUTPUT_DIR = Path("output")
@@ -91,8 +92,8 @@ def resolve_raw_url(url: str) -> str:
     return url
 
 
-def download_config(url: str) -> Path:
-    """Download a config file from a URL to a local temp file.
+def download_from_url(url: str) -> Path:
+    """Download a config file from an HTTP(S) URL to a local temp file.
 
     Args:
         url: HTTP(S) URL to the config file.
@@ -106,13 +107,42 @@ def download_config(url: str) -> Path:
     return local_path
 
 
+def is_s3_uri(source: str) -> bool:
+    """Check whether a config source string is an S3 URI.
+
+    Args:
+        source: The config_file argument as passed on the command line.
+
+    Returns:
+        True if source has an s3 scheme, False otherwise.
+    """
+    return urlparse(source).scheme == "s3"
+
+
+def download_from_s3(uri: str) -> Path:
+    """Download a config file from an S3 URI to a local temp file.
+
+    Args:
+        uri: S3 URI to the config file, e.g. s3://bucket/key/config.txt.
+
+    Returns:
+        Path to the downloaded local copy of the config file.
+    """
+    parsed = urlparse(uri)
+    bucket = parsed.netloc
+    key = parsed.path.lstrip("/")
+    local_path = Path(tempfile.gettempdir()) / Path(key).name
+    boto3.client("s3").download_file(bucket, key, str(local_path))
+    return local_path
+
+
 def resolve_config_path(source: str) -> Path:
     """Resolve the config_file argument to a concrete local XML file path.
 
-    Handles three cases: an HTTP(S) URL (downloaded first); a directory
-    (MAAP DPS localizes "file" type inputs into the job's working
-    directory and passes that directory, often ".", instead of the
-    original URL or filename); and a direct path to the config file.
+    Accepts an HTTP(S) URL, an S3 URI, or a direct local file path. A
+    directory is also accepted as a fallback, in case MAAP DPS localizes
+    a "file" type input into the job's working directory and passes that
+    directory (often ".") instead of the original URL or filename.
 
     Args:
         source: The config_file argument as passed on the command line.
@@ -124,7 +154,9 @@ def resolve_config_path(source: str) -> Path:
         FileNotFoundError: If source is a directory with no config file in it.
     """
     if is_url(source):
-        return download_config(source)
+        return download_from_url(source)
+    if is_s3_uri(source):
+        return download_from_s3(source)
 
     path = Path(source)
     if path.is_dir():
@@ -207,7 +239,8 @@ def main() -> None:
     """Parse arguments, process the config file, and write PGE outputs."""
     parser = argparse.ArgumentParser(description="JOSFRA PGE for MAAP DPS")
     parser.add_argument(
-        "config_file", help="Path or URL to the PGE XML config file"
+        "config_file",
+        help="Path, HTTP(S) URL, or s3:// URI to the PGE XML config file",
     )
     args = parser.parse_args()
 
