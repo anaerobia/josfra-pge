@@ -172,12 +172,14 @@ def resolve_config_path(source: str) -> Path:
 
 
 def log_directory_listing() -> None:
-    """Log the output of `ls ./*` for debugging the job's working directory."""
+    """Print and log the output of `ls ./*` for debugging the working directory."""
     result = subprocess.run(
         "ls ./*", shell=True, capture_output=True, text=True, check=False
     )
+    print(f"ls ./* output:\n{result.stdout}")
     logging.info("ls ./* output:\n%s", result.stdout)
     if result.stderr:
+        print(f"ls ./* stderr:\n{result.stderr}")
         logging.info("ls ./* stderr:\n%s", result.stderr)
 
 
