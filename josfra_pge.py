@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import argparse
 import logging
+import random
+import string
+import subprocess
 import tempfile
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -19,6 +22,7 @@ import boto3
 from netCDF4 import Dataset
 
 OUTPUT_DIR = Path("output")
+RANDOM_STRING_LENGTH = 1000
 
 
 def get_scalar(root: ET.Element, group_name: str, scalar_name: str) -> str:
@@ -167,6 +171,28 @@ def resolve_config_path(source: str) -> Path:
     return path
 
 
+def log_directory_listing() -> None:
+    """Log the output of `ls ./*` for debugging the job's working directory."""
+    result = subprocess.run(
+        "ls ./*", shell=True, capture_output=True, text=True, check=False
+    )
+    logging.info("ls ./* output:\n%s", result.stdout)
+    if result.stderr:
+        logging.info("ls ./* stderr:\n%s", result.stderr)
+
+
+def generate_random_string(length: int) -> str:
+    """Generate a random alphanumeric string of the given length.
+
+    Args:
+        length: Number of characters to generate.
+
+    Returns:
+        A random string composed of ASCII letters and digits.
+    """
+    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+
+
 def build_output_basename(root: ET.Element) -> str:
     """Derive the shared output product basename from the config.
 
@@ -196,9 +222,10 @@ def build_output_basename(root: ET.Element) -> str:
 def write_netcdf(root: ET.Element, output_path: Path) -> None:
     """Write the NetCDF product derived from the config file.
 
-    StartGranuleNumber, StartDateTime, and Version become global attributes.
-    DynamicAuxiliaryInputFiles and InputProductFiles become groups,
-    with each scalar in them stored as a group attribute.
+    StartGranuleNumber, StartDateTime, Version, and a random 1000-character
+    RandomString become global attributes. DynamicAuxiliaryInputFiles and
+    InputProductFiles become groups, with each scalar in them stored as a
+    group attribute.
 
     Args:
         root: Root element of the parsed config XML.
@@ -214,6 +241,7 @@ def write_netcdf(root: ET.Element, output_path: Path) -> None:
         dataset.StartGranuleNumber = int(start_granule_number)
         dataset.StartDateTime = start_date_time
         dataset.Version = version
+        dataset.RandomString = generate_random_string(RANDOM_STRING_LENGTH)
 
         aux_group = dataset.createGroup("DynamicAuxiliaryInputFiles")
         for name, value in dynamic_aux_files.items():
@@ -261,6 +289,8 @@ def main() -> None:
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
     if config_path != Path(args.config_file):
         logging.info("Resolved config to local file: %s", config_path)
+
+    log_directory_listing()
 
     nc_path = OUTPUT_DIR / f"{basename}.nc"
     write_netcdf(root, nc_path)
