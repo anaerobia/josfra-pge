@@ -171,15 +171,36 @@ def resolve_config_path(source: str) -> Path:
     return path
 
 
-def log_directory_listing() -> None:
-    """Print and log the output of `ls ./*` for debugging the working directory."""
-    result = subprocess.run(
+def get_directory_listing() -> subprocess.CompletedProcess[str]:
+    """Run `ls ./*` for debugging the job's working directory.
+
+    Returns:
+        The completed process, with stdout/stderr captured as text.
+    """
+    return subprocess.run(
         "ls ./*", shell=True, capture_output=True, text=True, check=False
     )
+
+
+def print_directory_listing(result: subprocess.CompletedProcess[str]) -> None:
+    """Print a directory listing result to the console.
+
+    Args:
+        result: The completed process returned by get_directory_listing.
+    """
     print(f"ls ./* output:\n{result.stdout}")
-    logging.info("ls ./* output:\n%s", result.stdout)
     if result.stderr:
         print(f"ls ./* stderr:\n{result.stderr}")
+
+
+def log_directory_listing(result: subprocess.CompletedProcess[str]) -> None:
+    """Log a directory listing result to the configured log file.
+
+    Args:
+        result: The completed process returned by get_directory_listing.
+    """
+    logging.info("ls ./* output:\n%s", result.stdout)
+    if result.stderr:
         logging.info("ls ./* stderr:\n%s", result.stderr)
 
 
@@ -274,6 +295,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    directory_listing = get_directory_listing()
+    print_directory_listing(directory_listing)
+
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     config_path = resolve_config_path(args.config_file)
@@ -289,10 +313,9 @@ def main() -> None:
     )
 
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
+    log_directory_listing(directory_listing)
     if config_path != Path(args.config_file):
         logging.info("Resolved config to local file: %s", config_path)
-
-    log_directory_listing()
 
     nc_path = OUTPUT_DIR / f"{basename}.nc"
     write_netcdf(root, nc_path)
