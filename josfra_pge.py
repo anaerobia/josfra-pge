@@ -22,7 +22,7 @@ import boto3
 from netCDF4 import Dataset
 
 OUTPUT_DIR = Path("output")
-RANDOM_STRING_LENGTH = 1000
+RANDOM_STRING_LENGTH = 5000
 
 
 def get_scalar(root: ET.Element, group_name: str, scalar_name: str) -> str:
@@ -193,15 +193,33 @@ def print_directory_listing(result: subprocess.CompletedProcess[str]) -> None:
         print(f"ls ./* stderr:\n{result.stderr}")
 
 
-def log_directory_listing(result: subprocess.CompletedProcess[str]) -> None:
-    """Log a directory listing result to the configured log file.
+def log_directory_listing(
+    result: subprocess.CompletedProcess[str], input_dir: str | Path
+) -> None:
+    """Log the working directory, a directory listing, and the input config file.
 
     Args:
         result: The completed process returned by get_directory_listing.
+        input_dir: Directory to search for a `*.config.txt` file.
     """
+    logging.info("Current directory: %s", Path.cwd())
+
     logging.info("ls ./* output:\n%s", result.stdout)
     if result.stderr:
         logging.info("ls ./* stderr:\n%s", result.stderr)
+
+    input_path = Path(input_dir)
+    if input_path.is_dir():
+        config_txt_files = sorted(input_path.glob("*.config.txt"))
+        if config_txt_files:
+            config_txt_path = config_txt_files[0]
+            logging.info(
+                "Found %s:\n%s",
+                config_txt_path,
+                config_txt_path.read_text(encoding="utf-8"),
+            )
+
+    logging.info("Random string: %s", generate_random_string(RANDOM_STRING_LENGTH))
 
 
 def generate_random_string(length: int) -> str:
@@ -245,7 +263,7 @@ def build_output_basename(root: ET.Element) -> str:
 def write_netcdf(root: ET.Element, output_path: Path) -> None:
     """Write the NetCDF product derived from the config file.
 
-    StartGranuleNumber, StartDateTime, Version, and a random 1000-character
+    StartGranuleNumber, StartDateTime, Version, and a random 5000-character
     RandomString become global attributes. DynamicAuxiliaryInputFiles and
     InputProductFiles become groups, with each scalar in them stored as a
     group attribute.
@@ -313,7 +331,7 @@ def main() -> None:
     )
 
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
-    log_directory_listing(directory_listing)
+    log_directory_listing(directory_listing, args.config_file)
     if config_path != Path(args.config_file):
         logging.info("Resolved config to local file: %s", config_path)
 
