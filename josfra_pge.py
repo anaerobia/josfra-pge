@@ -340,7 +340,12 @@ def main() -> None:
     logging.info("Wrote CAS output: %s", cas_path)
 
     logging.info("JOSFRA PGE processing complete.")
-    print_directory_listing(get_directory_listing())
+
+    final_directory_listing = get_directory_listing()
+    print_directory_listing(final_directory_listing)
+    logging.info("ls ./* output:\n%s", final_directory_listing.stdout)
+    if final_directory_listing.stderr:
+        logging.info("ls ./* stderr:\n%s", final_directory_listing.stderr)
 
 
 if __name__ == "__main__":
