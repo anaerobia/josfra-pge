@@ -194,13 +194,13 @@ def print_directory_listing(result: subprocess.CompletedProcess[str]) -> None:
 
 
 def log_directory_listing(
-    result: subprocess.CompletedProcess[str], input_dir: str | Path
+    result: subprocess.CompletedProcess[str], config_path: Path
 ) -> None:
-    """Log the working directory, a directory listing, and the input config file.
+    """Log the working directory, a directory listing, and the config file used.
 
     Args:
         result: The completed process returned by get_directory_listing.
-        input_dir: Directory to search for a `*.config.txt` file.
+        config_path: The resolved local config file that was parsed.
     """
     logging.info("Current directory: %s", Path.cwd())
 
@@ -208,17 +208,12 @@ def log_directory_listing(
     if result.stderr:
         logging.info("ls ./* stderr:\n%s", result.stderr)
 
-    input_path = Path(input_dir)
-    if input_path.is_dir():
-        config_txt_files = sorted(input_path.glob("*.config.txt"))
-        if config_txt_files:
-            config_txt_path = config_txt_files[0]
-            logging.info("Found config.txt file: %s", config_txt_path.resolve())
-            logging.info(
-                "Found %s:\n---------------\n%s\n---------------",
-                config_txt_path,
-                config_txt_path.read_text(encoding="utf-8"),
-            )
+    logging.info("Found config.txt file: %s", config_path.resolve())
+    logging.info(
+        "Found %s:\n---------------\n%s\n---------------",
+        config_path,
+        config_path.read_text(encoding="utf-8"),
+    )
 
     logging.info("Random string: %s", generate_random_string(RANDOM_STRING_LENGTH))
 
@@ -332,7 +327,7 @@ def main() -> None:
     )
 
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
-    log_directory_listing(directory_listing, args.config_file)
+    log_directory_listing(directory_listing, config_path)
     if config_path != Path(args.config_file):
         logging.info("Resolved config to local file: %s", config_path)
 
