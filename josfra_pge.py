@@ -213,8 +213,9 @@ def log_directory_listing(
         config_txt_files = sorted(input_path.glob("*.config.txt"))
         if config_txt_files:
             config_txt_path = config_txt_files[0]
+            logging.info("Found config.txt file: %s", config_txt_path.resolve())
             logging.info(
-                "Found %s:\n%s",
+                "Found %s:\n---------------\n%s\n---------------",
                 config_txt_path,
                 config_txt_path.read_text(encoding="utf-8"),
             )
