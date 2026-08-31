@@ -344,6 +344,7 @@ def main() -> None:
     logging.info("Wrote CAS output: %s", cas_path)
 
     logging.info("JOSFRA PGE processing complete.")
+    print_directory_listing(get_directory_listing())
 
 
 if __name__ == "__main__":
