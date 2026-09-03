@@ -203,14 +203,12 @@ def print_directory_listing(
 def log_directory_listing(
     result: subprocess.CompletedProcess[str],
     inputs_listing: subprocess.CompletedProcess[str],
-    config_path: Path,
 ) -> None:
-    """Log the working directory, /inputs/, and the config file used.
+    """Log the working directory and /inputs/ listings.
 
     Args:
         result: The completed process returned by get_directory_listing.
         inputs_listing: The completed process for `ls -la /inputs/`.
-        config_path: The resolved local config file that was parsed.
     """
     logging.info("Current directory: %s", Path.cwd())
 
@@ -221,13 +219,6 @@ def log_directory_listing(
     logging.info("ls -la /inputs/ output:\n%s", inputs_listing.stdout)
     if inputs_listing.stderr:
         logging.info("ls -la /inputs/ stderr:\n%s", inputs_listing.stderr)
-
-    logging.info("Found config.txt file: %s", config_path.resolve())
-    logging.info(
-        "Found %s:\n---------------\n%s\n---------------",
-        config_path,
-        config_path.read_text(encoding="utf-8"),
-    )
 
     logging.info("Random string: %s", generate_random_string(RANDOM_STRING_LENGTH))
 
@@ -344,7 +335,7 @@ def main() -> None:
     )
 
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
-    log_directory_listing(directory_listing, inputs_listing, config_path)
+    log_directory_listing(directory_listing, inputs_listing)
     if config_path != Path(args.config_file):
         logging.info("Resolved config to local file: %s", config_path)
 
