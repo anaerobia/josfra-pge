@@ -171,35 +171,45 @@ def resolve_config_path(source: str) -> Path:
     return path
 
 
-def get_directory_listing() -> subprocess.CompletedProcess[str]:
-    """Run `ls ./*` for debugging the job's working directory.
+def get_directory_listing(command: str = "ls ./*") -> subprocess.CompletedProcess[str]:
+    """Run an `ls` command for debugging.
+
+    Args:
+        command: Shell command to run (defaults to `ls ./*` for the
+            current working directory).
 
     Returns:
         The completed process, with stdout/stderr captured as text.
     """
     return subprocess.run(
-        "ls ./*", shell=True, capture_output=True, text=True, check=False
+        command, shell=True, capture_output=True, text=True, check=False
     )
 
 
-def print_directory_listing(result: subprocess.CompletedProcess[str]) -> None:
+def print_directory_listing(
+    result: subprocess.CompletedProcess[str], command: str = "ls ./*"
+) -> None:
     """Print a directory listing result to the console.
 
     Args:
         result: The completed process returned by get_directory_listing.
+        command: The `ls` command that produced result, for labeling output.
     """
-    print(f"ls ./* output:\n{result.stdout}")
+    print(f"{command} output:\n{result.stdout}")
     if result.stderr:
-        print(f"ls ./* stderr:\n{result.stderr}")
+        print(f"{command} stderr:\n{result.stderr}")
 
 
 def log_directory_listing(
-    result: subprocess.CompletedProcess[str], config_path: Path
+    result: subprocess.CompletedProcess[str],
+    inputs_listing: subprocess.CompletedProcess[str],
+    config_path: Path,
 ) -> None:
-    """Log the working directory, a directory listing, and the config file used.
+    """Log the working directory, /inputs/, and the config file used.
 
     Args:
         result: The completed process returned by get_directory_listing.
+        inputs_listing: The completed process for `ls -la /inputs/`.
         config_path: The resolved local config file that was parsed.
     """
     logging.info("Current directory: %s", Path.cwd())
@@ -207,6 +217,10 @@ def log_directory_listing(
     logging.info("ls ./* output:\n%s", result.stdout)
     if result.stderr:
         logging.info("ls ./* stderr:\n%s", result.stderr)
+
+    logging.info("ls -la /inputs/ output:\n%s", inputs_listing.stdout)
+    if inputs_listing.stderr:
+        logging.info("ls -la /inputs/ stderr:\n%s", inputs_listing.stderr)
 
     logging.info("Found config.txt file: %s", config_path.resolve())
     logging.info(
@@ -312,6 +326,9 @@ def main() -> None:
     directory_listing = get_directory_listing()
     print_directory_listing(directory_listing)
 
+    inputs_listing = get_directory_listing("ls -la /inputs/")
+    print_directory_listing(inputs_listing, "ls -la /inputs/")
+
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     config_path = resolve_config_path(args.config_file)
@@ -327,7 +344,7 @@ def main() -> None:
     )
 
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
-    log_directory_listing(directory_listing, config_path)
+    log_directory_listing(directory_listing, inputs_listing, config_path)
     if config_path != Path(args.config_file):
         logging.info("Resolved config to local file: %s", config_path)
 
@@ -346,6 +363,12 @@ def main() -> None:
     logging.info("ls ./* output:\n%s", final_directory_listing.stdout)
     if final_directory_listing.stderr:
         logging.info("ls ./* stderr:\n%s", final_directory_listing.stderr)
+
+    outputs_listing = get_directory_listing("ls -la /outputs/")
+    print_directory_listing(outputs_listing, "ls -la /outputs/")
+    logging.info("ls -la /outputs/ output:\n%s", outputs_listing.stdout)
+    if outputs_listing.stderr:
+        logging.info("ls -la /outputs/ stderr:\n%s", outputs_listing.stderr)
 
 
 if __name__ == "__main__":
