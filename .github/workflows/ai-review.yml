@@ -20,6 +20,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          show_full_output: "true"
           prompt: |
             Review the diff in this pull request for correctness bugs, security
             issues, and regressions. Ignore style preferences.
