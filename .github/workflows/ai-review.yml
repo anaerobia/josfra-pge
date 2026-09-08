@@ -1,0 +1,55 @@
+name: AI Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run Claude review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Review the diff in this pull request for correctness bugs, security
+            issues, and regressions. Ignore style preferences.
+
+            Post your findings as a single comment on this PR:
+            gh pr comment ${{ github.event.pull_request.number }} --body "..."
+
+            End that comment with exactly one line, alone by itself:
+            REVIEW_RESULT: APPROVE
+            or
+            REVIEW_RESULT: CHANGES_NEEDED
+          claude_args: '--allowedTools "Bash(gh pr comment:*)"'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decide and act on verdict
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LAST_COMMENT=$(gh pr view ${{ github.event.pull_request.number }} \
+            --json comments --jq '.comments[-1].body')
+          echo "$LAST_COMMENT"
+          if echo "$LAST_COMMENT" | grep -q "REVIEW_RESULT: APPROVE"; then
+            if [ "${{ vars.AUTO_MERGE_ENABLED }}" = "true" ]; then
+              gh pr review ${{ github.event.pull_request.number }} --approve \
+                --body "Reviewed by Claude — no blocking issues found."
+              gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+            else
+              echo "Auto-merge disabled (AUTO_MERGE_ENABLED=false) — review posted, no action taken."
+            fi
+          else
+            echo "Claude flagged issues — leaving PR as-is."
+          fi
