@@ -1,7 +1,10 @@
-FROM mas.maap-project.org/root/maap-workspaces/custom_images/maap_base:v6.0.0
+FROM almalinux:8
 
-# Install dependencies
-RUN pip install netCDF4 boto3
+# Install Python and dependencies
+RUN dnf -y install python39 python39-pip \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
+RUN pip3 install --no-cache-dir netCDF4 boto3
 
 # Copy algorithm code into /app/josfra-pge/
 COPY . /app/josfra-pge/
