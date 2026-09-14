@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex
 
-# Parse named args — all come in as strings
+# Parse named arguments from OGC CWL runner
 while [[ $# -gt 0 ]]; do
     case $1 in
         --pge_config)      PGE_CONFIG="$2";      shift 2 ;;
@@ -13,34 +13,23 @@ while [[ $# -gt 0 ]]; do
         --forecast_6hr)    FORECAST_6HR="$2";    shift 2 ;;
         --forecast_9hr)    FORECAST_9HR="$2";    shift 2 ;;
         *)                 shift ;;
-    esac
+    esac    
 done
 
-# Not yet confirmed whether DPS creates /inputs/ itself -- hold off copying
-# anything until we've seen a run's actual /inputs/ contents.
-# # Create /inputs/ manually since DPS won't do it
-# mkdir -p /inputs
-#
-# # DPS/CWL already localizes File inputs to a staged local path -- copy them in
-# cp "$PRIMARY_INPUT"   /inputs/primary_input
-# cp "$SECONDARY_INPUT" /inputs/secondary_input
-# cp "$LOG_FILE"        /inputs/log_file
-# cp "$CONFIG_FILE"     /inputs/config_file
-#
-# # Copy optional forecast files only if provided
-# if [ -n "$FORECAST_3HR" ]; then
-#     cp "$FORECAST_3HR" /inputs/forecast_3hr
-# fi
-# if [ -n "$FORECAST_6HR" ]; then
-#     cp "$FORECAST_6HR" /inputs/forecast_6hr
-# fi
-# if [ -n "$FORECAST_9HR" ]; then
-#     cp "$FORECAST_9HR" /inputs/forecast_9hr
-# fi
-#
-# echo "Contents of /inputs/:"
-# ls -la /inputs/
+# Create ./inputs/ so pge_config can reference predictable paths
+mkdir -p ./inputs
 
-# Run the PGE — pge_config is also a staged local path; josfra_pge.py's
-# resolve_config_path handles local paths (as well as S3/HTTP URIs) directly
+# Copy CWL-staged files to ./inputs/ with predictable names
+[ -n "$PRIMARY_INPUT" ]   && cp "$PRIMARY_INPUT"   ./inputs/primary_input
+[ -n "$SECONDARY_INPUT" ] && cp "$SECONDARY_INPUT" ./inputs/secondary_input
+[ -n "$LOG_FILE" ]        && cp "$LOG_FILE"        ./inputs/log_file
+[ -n "$CONFIG_FILE" ]     && cp "$CONFIG_FILE"     ./inputs/config_file
+[ -n "$FORECAST_3HR" ]    && cp "$FORECAST_3HR"    ./inputs/forecast_3hr
+[ -n "$FORECAST_6HR" ]    && cp "$FORECAST_6HR"    ./inputs/forecast_6hr
+[ -n "$FORECAST_9HR" ]    && cp "$FORECAST_9HR"    ./inputs/forecast_9hr
+
+echo "Contents of ./inputs/:"
+ls -la ./inputs/
+
+# Run PGE — pge_config is an S3 URI, resolve_config_path downloads it
 python /app/josfra-pge/josfra_pge.py "$PGE_CONFIG"
