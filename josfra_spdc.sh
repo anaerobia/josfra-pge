@@ -1,6 +1,10 @@
 #!/bin/bash
 set -ex
 
+echo "SHELL PWD: $(pwd)"
+echo "SHELL ls ./*:"
+ls ./* 2>/dev/null || echo "(empty)"
+
 # Parse named arguments from OGC CWL runner
 while [[ $# -gt 0 ]]; do
     case $1 in
