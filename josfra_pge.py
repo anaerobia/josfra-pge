@@ -23,7 +23,10 @@ from netCDF4 import Dataset
 
 OUTPUT_DIR = Path("output")
 RANDOM_STRING_LENGTH = 5000
-GET_BUILD_ID_PATH = Path(__file__).resolve().parent / "getBuildId"
+EXECUTABLE_DIR = Path(__file__).resolve().parent
+GET_BUILD_ID_PATH = EXECUTABLE_DIR / "getBuildId"
+TAI_TO_UTC_PATH = EXECUTABLE_DIR / "taiToUtc"
+TAI_TO_UTC_ARGS = ["01"]
 
 
 def get_scalar(root: ET.Element, group_name: str, scalar_name: str) -> str:
@@ -224,28 +227,33 @@ def log_directory_listing(
     logging.info("Random string: %s", generate_random_string(RANDOM_STRING_LENGTH))
 
 
-def log_build_id() -> int | None:
-    """Run the getBuildId C++ executable and log its result.
+def log_executable(executable: Path, args: list[str] | None = None) -> int | None:
+    """Run a bundled C++ executable and log its result.
 
     Logs the executable's exit status along with its stdout and stderr. If
     the executable cannot be run at all (missing, not executable, wrong
     architecture), the failure is logged instead of raising.
 
+    Args:
+        executable: Path to the executable to run.
+        args: Command-line arguments to pass, or None to pass none.
+
     Returns:
         The executable's exit status, or None if it could not be run.
     """
+    command = [str(executable), *(args or [])]
+    label = " ".join(command)
+
     try:
-        result = subprocess.run(
-            [str(GET_BUILD_ID_PATH)], capture_output=True, text=True, check=False
-        )
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
     except OSError as exc:
-        logging.error("Failed to run %s: %s", GET_BUILD_ID_PATH, exc)
+        logging.error("Failed to run %s: %s", label, exc)
         return None
 
-    logging.info("%s return value: %d", GET_BUILD_ID_PATH, result.returncode)
-    logging.info("%s stdout:\n%s", GET_BUILD_ID_PATH, result.stdout)
+    logging.info("%s return value: %d", label, result.returncode)
+    logging.info("%s stdout:\n%s", label, result.stdout)
     if result.stderr:
-        logging.info("%s stderr:\n%s", GET_BUILD_ID_PATH, result.stderr)
+        logging.info("%s stderr:\n%s", label, result.stderr)
     return result.returncode
 
 
@@ -362,7 +370,8 @@ def main() -> None:
 
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
     log_directory_listing(directory_listing, inputs_listing)
-    log_build_id()
+    log_executable(GET_BUILD_ID_PATH)
+    log_executable(TAI_TO_UTC_PATH, TAI_TO_UTC_ARGS)
     if config_path != Path(args.config_file):
         logging.info("Resolved config to local file: %s", config_path)
 

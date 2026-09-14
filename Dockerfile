@@ -6,6 +6,9 @@ RUN dnf -y install python39 python39-pip \
     && rm -rf /var/cache/dnf
 RUN pip3 install --no-cache-dir netCDF4 boto3
 
+# josfra_spdc.sh invokes `python`; EL8 only provides `python3`
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+
 # Copy algorithm code into /app/josfra-pge/
 COPY . /app/josfra-pge/
 
