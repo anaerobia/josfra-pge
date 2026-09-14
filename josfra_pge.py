@@ -23,6 +23,7 @@ from netCDF4 import Dataset
 
 OUTPUT_DIR = Path("output")
 RANDOM_STRING_LENGTH = 5000
+GET_BUILD_ID_PATH = Path(__file__).resolve().parent / "getBuildId"
 
 
 def get_scalar(root: ET.Element, group_name: str, scalar_name: str) -> str:
@@ -223,6 +224,31 @@ def log_directory_listing(
     logging.info("Random string: %s", generate_random_string(RANDOM_STRING_LENGTH))
 
 
+def log_build_id() -> int | None:
+    """Run the getBuildId C++ executable and log its result.
+
+    Logs the executable's exit status along with its stdout and stderr. If
+    the executable cannot be run at all (missing, not executable, wrong
+    architecture), the failure is logged instead of raising.
+
+    Returns:
+        The executable's exit status, or None if it could not be run.
+    """
+    try:
+        result = subprocess.run(
+            [str(GET_BUILD_ID_PATH)], capture_output=True, text=True, check=False
+        )
+    except OSError as exc:
+        logging.error("Failed to run %s: %s", GET_BUILD_ID_PATH, exc)
+        return None
+
+    logging.info("%s return value: %d", GET_BUILD_ID_PATH, result.returncode)
+    logging.info("%s stdout:\n%s", GET_BUILD_ID_PATH, result.stdout)
+    if result.stderr:
+        logging.info("%s stderr:\n%s", GET_BUILD_ID_PATH, result.stderr)
+    return result.returncode
+
+
 def generate_random_string(length: int) -> str:
     """Generate a random alphanumeric string of the given length.
 
@@ -336,6 +362,7 @@ def main() -> None:
 
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
     log_directory_listing(directory_listing, inputs_listing)
+    log_build_id()
     if config_path != Path(args.config_file):
         logging.info("Resolved config to local file: %s", config_path)
 
