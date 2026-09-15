@@ -175,6 +175,22 @@ def resolve_config_path(source: str) -> Path:
     return path
 
 
+def resolve_log_path(log_filename: str) -> Path:
+    """Resolve the log_filename argument to a concrete output log path.
+
+    An absolute log_filename is used as given; a relative one is written
+    inside OUTPUT_DIR alongside the other PGE products.
+
+    Args:
+        log_filename: The log_filename argument as passed on the command line.
+
+    Returns:
+        Path the processing log should be written to.
+    """
+    path = Path(log_filename)
+    return path if path.is_absolute() else OUTPUT_DIR / path
+
+
 def get_directory_listing(command: str = "ls ./*") -> subprocess.CompletedProcess[str]:
     """Run an `ls` command for debugging.
 
@@ -346,6 +362,10 @@ def main() -> None:
         "config_file",
         help="Path, HTTP(S) URL, or s3:// URI to the PGE XML config file",
     )
+    parser.add_argument(
+        "log_filename",
+        help="Name of the processing log file to write (relative to output/)",
+    )
     args = parser.parse_args()
 
     directory_listing = get_directory_listing()
@@ -361,7 +381,8 @@ def main() -> None:
     root = ET.parse(config_path).getroot()
     basename = build_output_basename(root)
 
-    log_path = OUTPUT_DIR / f"{basename}.log"
+    log_path = resolve_log_path(args.log_filename)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         filename=log_path,
         level=logging.INFO,
