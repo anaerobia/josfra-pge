@@ -20,19 +20,26 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Create ./inputs/ so config_file can reference predictable paths
-mkdir -p ./inputs
+# The config file is edited in place below, so it must be a local file
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "config_file is not a local file: $CONFIG_FILE" >&2
+    exit 1
+fi
 
-# Copy CWL-staged files to ./inputs/ with predictable names
-[ -n "$L1C_FILE" ]        && cp "$L1C_FILE"        ./inputs/l1c_file
-[ -n "$MOCCA_FILE" ]      && cp "$MOCCA_FILE"      ./inputs/mocca_file
-[ -n "$FORECAST_FILE_1" ] && cp "$FORECAST_FILE_1" ./inputs/forecast_file_1
-[ -n "$FORECAST_FILE_2" ] && cp "$FORECAST_FILE_2" ./inputs/forecast_file_2
-[ -n "$FORECAST_FILE_3" ] && cp "$FORECAST_FILE_3" ./inputs/forecast_file_3
-[ -n "$FORECAST_FILE_4" ] && cp "$FORECAST_FILE_4" ./inputs/forecast_file_4
+# Rewrite a <scalar name="..."> value in the config file, in place
+set_config_scalar() {
+    local name="$1" value="$2" escaped
+    escaped=$(printf '%s' "$value" | sed -e 's/[\\&|]/\\&/g')
+    sed -i -E "s|(<scalar name=\"${name}\">)[^<]*(</scalar>)|\1${escaped}\2|" "$CONFIG_FILE"
+}
 
-echo "Contents of ./inputs/:"
-ls -la ./inputs/
+# Point the input product scalars at the CWL-staged files
+if [ -n "$L1C_FILE" ]; then
+    set_config_scalar AirsL1cFile "$(realpath "$L1C_FILE")"
+fi
+if [ -n "$MOCCA_FILE" ]; then
+    set_config_scalar AirsMoccaFile "$(realpath "$MOCCA_FILE")"
+fi
 
-# Run PGE — config_file is an S3 URI, resolve_config_path downloads it
+# Run PGE
 python /app/josfra-pge/josfra_pge.py "$CONFIG_FILE" "$LOG_FILENAME"

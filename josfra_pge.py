@@ -191,6 +191,23 @@ def resolve_log_path(log_filename: str) -> Path:
     return path if path.is_absolute() else OUTPUT_DIR / path
 
 
+def print_config_file(config_path: Path) -> str:
+    """Print the config file's contents to the console.
+
+    josfra_spdc.sh edits the config file in place before invoking the PGE,
+    so this shows the config as actually processed.
+
+    Args:
+        config_path: Path to the local config XML file.
+
+    Returns:
+        The config file's contents.
+    """
+    contents = config_path.read_text(encoding="utf-8")
+    print(f"Config file {config_path} contents:\n{contents}")
+    return contents
+
+
 def get_directory_listing(command: str = "ls ./*") -> subprocess.CompletedProcess[str]:
     """Run an `ls` command for debugging.
 
@@ -377,6 +394,7 @@ def main() -> None:
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     config_path = resolve_config_path(args.config_file)
+    config_contents = print_config_file(config_path)
 
     root = ET.parse(config_path).getroot()
     basename = build_output_basename(root)
@@ -390,6 +408,7 @@ def main() -> None:
     )
 
     logging.info("Starting JOSFRA PGE processing for config file: %s", args.config_file)
+    logging.info("Config file %s contents:\n%s", config_path, config_contents)
     log_directory_listing(directory_listing, inputs_listing)
     log_executable(GET_BUILD_ID_PATH)
     log_executable(TAI_TO_UTC_PATH, TAI_TO_UTC_ARGS)
