@@ -8,32 +8,31 @@ ls ./* 2>/dev/null || echo "(empty)"
 # Parse named arguments from OGC CWL runner
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --pge_config)      PGE_CONFIG="$2";      shift 2 ;;
-        --primary_input)   PRIMARY_INPUT="$2";   shift 2 ;;
-        --secondary_input) SECONDARY_INPUT="$2"; shift 2 ;;
-        --log_file)        LOG_FILE="$2";        shift 2 ;;
-        --config_file)     CONFIG_FILE="$2";     shift 2 ;;
-        --forecast_3hr)    FORECAST_3HR="$2";    shift 2 ;;
-        --forecast_6hr)    FORECAST_6HR="$2";    shift 2 ;;
-        --forecast_9hr)    FORECAST_9HR="$2";    shift 2 ;;
-        *)                 shift ;;
-    esac    
+        --config_file)      CONFIG_FILE="$2";      shift 2 ;;
+        --log_filename)     LOG_FILENAME="$2";     shift 2 ;;
+        --l1c_file)         L1C_FILE="$2";         shift 2 ;;
+        --mocca_file)       MOCCA_FILE="$2";       shift 2 ;;
+        --forecast_file_1)  FORECAST_FILE_1="$2";  shift 2 ;;
+        --forecast_file_2)  FORECAST_FILE_2="$2";  shift 2 ;;
+        --forecast_file_3)  FORECAST_FILE_3="$2";  shift 2 ;;
+        --forecast_file_4)  FORECAST_FILE_4="$2";  shift 2 ;;
+        *)                  shift ;;
+    esac
 done
 
-# Create ./inputs/ so pge_config can reference predictable paths
+# Create ./inputs/ so config_file can reference predictable paths
 mkdir -p ./inputs
 
 # Copy CWL-staged files to ./inputs/ with predictable names
-[ -n "$PRIMARY_INPUT" ]   && cp "$PRIMARY_INPUT"   ./inputs/primary_input
-[ -n "$SECONDARY_INPUT" ] && cp "$SECONDARY_INPUT" ./inputs/secondary_input
-[ -n "$LOG_FILE" ]        && cp "$LOG_FILE"        ./inputs/log_file
-[ -n "$CONFIG_FILE" ]     && cp "$CONFIG_FILE"     ./inputs/config_file
-[ -n "$FORECAST_3HR" ]    && cp "$FORECAST_3HR"    ./inputs/forecast_3hr
-[ -n "$FORECAST_6HR" ]    && cp "$FORECAST_6HR"    ./inputs/forecast_6hr
-[ -n "$FORECAST_9HR" ]    && cp "$FORECAST_9HR"    ./inputs/forecast_9hr
+[ -n "$L1C_FILE" ]        && cp "$L1C_FILE"        ./inputs/l1c_file
+[ -n "$MOCCA_FILE" ]      && cp "$MOCCA_FILE"      ./inputs/mocca_file
+[ -n "$FORECAST_FILE_1" ] && cp "$FORECAST_FILE_1" ./inputs/forecast_file_1
+[ -n "$FORECAST_FILE_2" ] && cp "$FORECAST_FILE_2" ./inputs/forecast_file_2
+[ -n "$FORECAST_FILE_3" ] && cp "$FORECAST_FILE_3" ./inputs/forecast_file_3
+[ -n "$FORECAST_FILE_4" ] && cp "$FORECAST_FILE_4" ./inputs/forecast_file_4
 
 echo "Contents of ./inputs/:"
 ls -la ./inputs/
 
-# Run PGE — pge_config is an S3 URI, resolve_config_path downloads it
-python /app/josfra-pge/josfra_pge.py "$PGE_CONFIG"
+# Run PGE — config_file is an S3 URI, resolve_config_path downloads it
+python /app/josfra-pge/josfra_pge.py "$CONFIG_FILE" "$LOG_FILENAME"
