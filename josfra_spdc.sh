@@ -20,17 +20,23 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# The config file is edited in place below, so it must be a local file
+# The config file is copied and edited below, so it must be a local file
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "config_file is not a local file: $CONFIG_FILE" >&2
     exit 1
 fi
 
-# Rewrite a <scalar name="..."> value in the config file, in place
+# Copy the config to a writable local path first; the CWL-staged copy
+# may be read-only
+LOCAL_CONFIG=./pge_config_local.xml
+cp -f "$CONFIG_FILE" "$LOCAL_CONFIG"
+chmod u+w "$LOCAL_CONFIG"
+
+# Rewrite a <scalar name="..."> value in the local config copy
 set_config_scalar() {
     local name="$1" value="$2" escaped
     escaped=$(printf '%s' "$value" | sed -e 's/[\\&|]/\\&/g')
-    sed -i -E "s|(<scalar name=\"${name}\">)[^<]*(</scalar>)|\1${escaped}\2|" "$CONFIG_FILE"
+    sed -i -E "s|(<scalar name=\"${name}\">)[^<]*(</scalar>)|\1${escaped}\2|" "$LOCAL_CONFIG"
 }
 
 # Point the input product scalars at the CWL-staged files
@@ -41,5 +47,5 @@ if [ -n "$MOCCA_FILE" ]; then
     set_config_scalar AirsMoccaFile "$(realpath "$MOCCA_FILE")"
 fi
 
-# Run PGE
-python /app/josfra-pge/josfra_pge.py "$CONFIG_FILE" "$LOG_FILENAME"
+# Run PGE on the edited local config copy
+python /app/josfra-pge/josfra_pge.py "$LOCAL_CONFIG" "$LOG_FILENAME"
