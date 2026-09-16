@@ -20,9 +20,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Show what the runner actually handed us for config_file
+echo "config_file: $CONFIG_FILE"
+ls -la "$CONFIG_FILE" || true
+
 # The config file is copied and edited below, so it must be a local file
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "config_file is not a local file: $CONFIG_FILE" >&2
+    exit 1
+fi
+if [ ! -s "$CONFIG_FILE" ]; then
+    echo "config_file is empty: $CONFIG_FILE" >&2
+    echo "Check that the CWL config_file input points at the PGE XML config." >&2
     exit 1
 fi
 
