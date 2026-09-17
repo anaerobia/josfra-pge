@@ -4,7 +4,8 @@ FROM almalinux:8
 RUN dnf -y install python39 python39-pip \
     && dnf clean all \
     && rm -rf /var/cache/dnf
-RUN pip3 install --no-cache-dir netCDF4 boto3
+# awscli: josfra_spdc.sh downloads the forecast files with `aws s3 cp`
+RUN pip3 install --no-cache-dir netCDF4 boto3 awscli
 
 # josfra_spdc.sh invokes `python`; EL8 only provides `python3`
 RUN ln -sf /usr/bin/python3 /usr/bin/python

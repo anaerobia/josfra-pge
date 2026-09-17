@@ -56,5 +56,27 @@ if [ -n "$MOCCA_FILE" ]; then
     set_config_scalar AirsMoccaFile "$(realpath "$MOCCA_FILE")"
 fi
 
+# Optional forecast files — string type, download only if non-empty
+mkdir -p ./inputs
+
+if [ -n "$FORECAST_FILE_1" ]; then
+    aws s3 cp "$FORECAST_FILE_1" ./inputs/forecast_file_1
+fi
+
+if [ -n "$FORECAST_FILE_2" ]; then
+    aws s3 cp "$FORECAST_FILE_2" ./inputs/forecast_file_2
+fi
+
+if [ -n "$FORECAST_FILE_3" ]; then
+    aws s3 cp "$FORECAST_FILE_3" ./inputs/forecast_file_3
+fi
+
+if [ -n "$FORECAST_FILE_4" ]; then
+    aws s3 cp "$FORECAST_FILE_4" ./inputs/forecast_file_4
+fi
+
+echo "Contents of ./inputs/:"
+ls -la ./inputs/
+
 # Run PGE on the edited local config copy
 python /app/josfra-pge/josfra_pge.py "$LOCAL_CONFIG" "$LOG_FILENAME"
