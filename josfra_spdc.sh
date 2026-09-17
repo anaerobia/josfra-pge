@@ -41,9 +41,15 @@ LOCAL_CONFIG=./pge_config_local.xml
 cp -f "$CONFIG_FILE" "$LOCAL_CONFIG"
 chmod u+w "$LOCAL_CONFIG"
 
-# Rewrite a <scalar name="..."> value in the local config copy
+# Rewrite a <scalar name="..."> value in the local config copy. Scalars
+# that are not required are absent from some configs; skip those rather
+# than failing.
 set_config_scalar() {
     local name="$1" value="$2" escaped
+    if ! grep -q "<scalar name=\"${name}\">" "$LOCAL_CONFIG"; then
+        echo "scalar ${name} not present in config, skipping"
+        return 0
+    fi
     escaped=$(printf '%s' "$value" | sed -e 's/[\\&|]/\\&/g')
     sed -i -E "s|(<scalar name=\"${name}\">)[^<]*(</scalar>)|\1${escaped}\2|" "$LOCAL_CONFIG"
 }
@@ -77,6 +83,17 @@ fi
 
 echo "Contents of ./inputs/:"
 ls -la ./inputs/
+
+# Point the AVN forecast scalars at the downloaded forecast files
+if [ -n "$FORECAST_FILE_1" ]; then
+    set_config_scalar AVN_3 "$(realpath ./inputs/forecast_file_1)"
+fi
+if [ -n "$FORECAST_FILE_2" ]; then
+    set_config_scalar AVN_6 "$(realpath ./inputs/forecast_file_2)"
+fi
+if [ -n "$FORECAST_FILE_3" ]; then
+    set_config_scalar AVN_9 "$(realpath ./inputs/forecast_file_3)"
+fi
 
 # Run PGE on the edited local config copy
 python /app/josfra-pge/josfra_pge.py "$LOCAL_CONFIG" "$LOG_FILENAME"
