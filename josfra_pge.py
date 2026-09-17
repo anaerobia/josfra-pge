@@ -395,6 +395,8 @@ def main() -> None:
 
     config_path = resolve_config_path(args.config_file)
     config_contents = print_config_file(config_path)
+    if not config_contents.strip():
+        raise SystemExit(f"Config file is empty: {config_path}")
 
     root = ET.parse(config_path).getroot()
     basename = build_output_basename(root)

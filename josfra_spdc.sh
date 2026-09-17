@@ -20,9 +20,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Show what the runner actually handed us for config_file
+echo "config_file: $CONFIG_FILE"
+ls -la "$CONFIG_FILE" || true
+
 # The config file is copied and edited below, so it must be a local file
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "config_file is not a local file: $CONFIG_FILE" >&2
+    exit 1
+fi
+if [ ! -s "$CONFIG_FILE" ]; then
+    echo "config_file is empty: $CONFIG_FILE" >&2
+    echo "Check that the CWL config_file input points at the PGE XML config." >&2
     exit 1
 fi
 
@@ -32,9 +41,15 @@ LOCAL_CONFIG=./pge_config_local.xml
 cp -f "$CONFIG_FILE" "$LOCAL_CONFIG"
 chmod u+w "$LOCAL_CONFIG"
 
-# Rewrite a <scalar name="..."> value in the local config copy
+# Rewrite a <scalar name="..."> value in the local config copy. Scalars
+# that are not required are absent from some configs; skip those rather
+# than failing.
 set_config_scalar() {
     local name="$1" value="$2" escaped
+    if ! grep -q "<scalar name=\"${name}\">" "$LOCAL_CONFIG"; then
+        echo "scalar ${name} not present in config, skipping"
+        return 0
+    fi
     escaped=$(printf '%s' "$value" | sed -e 's/[\\&|]/\\&/g')
     sed -i -E "s|(<scalar name=\"${name}\">)[^<]*(</scalar>)|\1${escaped}\2|" "$LOCAL_CONFIG"
 }
@@ -45,6 +60,39 @@ if [ -n "$L1C_FILE" ]; then
 fi
 if [ -n "$MOCCA_FILE" ]; then
     set_config_scalar AirsMoccaFile "$(realpath "$MOCCA_FILE")"
+fi
+
+# Optional forecast files — string type, download only if non-empty
+mkdir -p ./inputs
+
+if [ -n "$FORECAST_FILE_1" ]; then
+    aws s3 cp "$FORECAST_FILE_1" ./inputs/forecast_file_1
+fi
+
+if [ -n "$FORECAST_FILE_2" ]; then
+    aws s3 cp "$FORECAST_FILE_2" ./inputs/forecast_file_2
+fi
+
+if [ -n "$FORECAST_FILE_3" ]; then
+    aws s3 cp "$FORECAST_FILE_3" ./inputs/forecast_file_3
+fi
+
+if [ -n "$FORECAST_FILE_4" ]; then
+    aws s3 cp "$FORECAST_FILE_4" ./inputs/forecast_file_4
+fi
+
+echo "Contents of ./inputs/:"
+ls -la ./inputs/
+
+# Point the AVN forecast scalars at the downloaded forecast files
+if [ -n "$FORECAST_FILE_1" ]; then
+    set_config_scalar AVN_3 "$(realpath ./inputs/forecast_file_1)"
+fi
+if [ -n "$FORECAST_FILE_2" ]; then
+    set_config_scalar AVN_6 "$(realpath ./inputs/forecast_file_2)"
+fi
+if [ -n "$FORECAST_FILE_3" ]; then
+    set_config_scalar AVN_9 "$(realpath ./inputs/forecast_file_3)"
 fi
 
 # Run PGE on the edited local config copy
