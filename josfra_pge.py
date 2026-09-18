@@ -52,21 +52,29 @@ def get_scalar(root: ET.Element, group_name: str, scalar_name: str) -> str:
     return scalar.text
 
 
-def get_group_scalars(root: ET.Element, group_name: str) -> dict[str, str]:
+def get_group_scalars(
+    root: ET.Element, group_name: str, required: bool = True
+) -> dict[str, str]:
     """Return all scalar name/value pairs within a named group.
 
     Args:
         root: Root element of the parsed config XML.
         group_name: Name attribute of the target <group> element.
+        required: Whether a missing group is an error. Groups holding
+            optional inputs are absent from some configs; those are read
+            with required=False and yield an empty mapping.
 
     Returns:
         A mapping of scalar name to scalar text value.
 
     Raises:
-        ValueError: If the group cannot be found.
+        ValueError: If the group cannot be found and required is True.
     """
     group = root.find(f"group[@name='{group_name}']")
     if group is None:
+        if not required:
+            logging.info("Group not present in config, skipping: %s", group_name)
+            return {}
         raise ValueError(f"Group not found in config: {group_name}")
     return {scalar.get("name", ""): scalar.text or "" for scalar in group.findall("scalar")}
 
@@ -343,8 +351,8 @@ def write_netcdf(root: ET.Element, output_path: Path) -> None:
     start_date_time = get_scalar(root, "GranuleIdentification", "StartDateTime")
     start_granule_number = get_scalar(root, "GranuleIdentification", "StartGranuleNumber")
     version = get_scalar(root, "PrimaryExecutable", "Version")
-    dynamic_aux_files = get_group_scalars(root, "DynamicAuxiliaryInputFiles")
-    input_product_files = get_group_scalars(root, "InputProductFiles")
+    dynamic_aux_files = get_group_scalars(root, "DynamicAuxiliaryInputFiles", required=False)
+    input_product_files = get_group_scalars(root, "InputProductFiles", required=False)
 
     with Dataset(output_path, "w", format="NETCDF4") as dataset:
         dataset.StartGranuleNumber = int(start_granule_number)
