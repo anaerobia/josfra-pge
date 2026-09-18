@@ -33,8 +33,10 @@
       <scalar name="MonitorFilenameFormat">SNDR.AQUA.AIRS.20140601T1423.m06.g144.JOSFRA.std.v02_24_00.I.260825173726.mon</scalar>
    </group>
    <group name="DynamicAuxiliaryInputFiles">
-      <scalar name="AVN_HDF_1_DEG_T06Z_F06">/dom/files/ops/correl/grid/2014/06/avi6_anh/NCEP.2014.06.01.T12Z.gblav_PHdfF06.A14152023619.hdf</scalar>
-      <scalar name="AVN_HDF_1_DEG_T06Z_F09">/dom/files/ops/correl/grid/2014/06/avi9_anh/NCEP.2014.06.01.T15Z.gblav_PHdfF09.A14152023432.hdf</scalar>
+      <scalar name="AVN_3">/dom/files/ops/correl/grid/2014/06/avi6_anh/NCEP.2014.06.01.T12Z.gblav_PHdfF06.A14152023619.hdf</scalar>
+      <scalar name="AVN_6">/dom/files/ops/correl/grid/2014/06/avi9_anh/NCEP.2014.06.01.T15Z.gblav_PHdfF09.A14152023432.hdf</scalar>
+      <scalar name="AVN_9">/dom/files/ops/correl/grid/2014/06/avi9_anh/NCEP.2014.06.01.T15Z.gblav_PHdfF09.A14152023432.hdf</scalar>
+
    </group>
    <group name="ProductPathGroup">
       <scalar name="ProductPath">/home/albertli/deploy/pge_exe_dir/AIRSJosfra/2026-08-25_subm/2014-06-01_nom/SNDR.AQUA.AIRS.20140601T1423.m06.g144.JOSFRA.std.v02_24_00.I.260825173726</scalar>
