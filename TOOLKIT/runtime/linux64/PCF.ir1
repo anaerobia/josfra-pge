@@ -1,0 +1,312 @@
+#
+# filename:
+# 	PCF.ir1
+#
+# description:
+#   	Process Control File (PCF)
+#
+# notes:
+#
+# 	This file supports the IR-1 version of the toolkit.
+#
+# 	Please treat this file as a master template and make copies of it
+# 	for your own testing. Note that the Toolkit installation script sets
+# 	PGS_PC_INFO_FILE to point to this master file by default. Remember  
+# 	to reset the environment variable PGS_PC_INFO_FILE to point to the 
+# 	instance of your PCF.
+#
+# -----------------------------------------------------------------------
+?   SYSTEM RUNTIME PARAMETERS
+# -----------------------------------------------------------------------
+# Production Run ID - unique production instance identifier
+# -----------------------------------------------------------------------
+1
+# -----------------------------------------------------------------------
+# Software ID - unique software configuration identifier
+# -----------------------------------------------------------------------
+1
+#
+?   PRODUCT INPUT FILES
+# Next non-comment line is the default location for PRODUCT INPUT FILES
+# WARNING! DO NOT MODIFY THIS LINE unless you have relocated these 
+# data set files to the location specified by the new setting.
+!  ~/runtime
+#
+# -----------------------------------------------------------------------
+# These are actual ancillary data set files - supplied by ECS or the user
+# the following are supplied for purposes of tests and as a useful set of 
+# ancillary data.
+# -----------------------------------------------------------------------
+10780|usatile12||||10751|12
+10780|usatile11||||10750|11
+10780|usatile10||||10749|10
+10780|usatile9||||10748|9
+10780|usatile8||||10747|8
+10780|usatile7||||10746|7
+10780|usatile6||||10745|6
+10780|usatile5||||10744|5
+10780|usatile4||||10743|4
+10780|usatile3||||10742|3
+10780|usatile2||||10741|2
+10780|usatile1||||10740|1
+10951|mowe13a.img|||||1
+10952|owe13a.img|||||1
+10953|owe14d.img|||||1
+10954|owe14dr.img|||||1
+10955|etop05.dat|||||1
+10956|fnocazm.img|||||1
+10957|fnococm.img|||||1
+10958|fnocpt.img|||||1
+10959|fnocrdg.img|||||1
+10960|fnocst.img|||||1
+10961|fnocurb.img|||||1
+10962|fnocwat.img|||||1
+10963|fnocmax.imgs|||||1
+10964|fnocmin.imgs|||||1
+10965|fnocmod.imgs|||||1
+10966|srzarea.img|||||1
+10967|srzcode.img|||||1
+10968|srzphas.img|||||1
+10969|srzslop.img|||||1
+10970|srzsoil.img|||||1
+10971|srztext.img|||||1
+10972|nmcRucPotPres.datrepack|||||1
+10973|tbase.bin||||10915|1
+10974|tbase.br||||10919|4
+10974|tbase.bl||||10918|3
+10974|tbase.tr||||10917|2
+10974|tbase.tl||||10916|1
+10975|geoid.dat|||||1
+#
+# -----------------------------------------------------------------------
+# The following are for the PGS_GCT tool only.
+# The IDs are #defined in the PGS_GCT.h file
+# -----------------------------------------------------------------------
+10200|nad27sp|~/runtime||||1
+10201|nad83sp|~/runtime||||1
+# -----------------------------------------------------------------------
+# The following are for the PGS_AA_DCW tool only.
+# The IDs are #defined in the PGS_AA_DCW.h file
+# -----------------------------------------------------------------------
+10990|eurnasia/|||||1
+10991|noamer/|||||1
+10992|soamafr/|||||1
+10993|sasaus/|||||1
+#
+# -----------------------------------------------------------------------
+# file for Constant & Unit Conversion (CUC) tools
+# IMPORTANT NOTE: THIS FILE WILL BE SUPPLIED AFTER TK4 DELIVERY!
+# -----------------------------------------------------------------------
+10999|PGS_CUC_maths_parameters|~/runtime||||1
+#
+#
+#--------------------------------------------------------------------
+# Metadata Configuration File (MCF) is a template to be filled in by the Instrument
+# teams.  The data dictionary is a set of the core metadata  attributes and their
+# descriptions.  Product specific metadata attribute values need to be added by the Instrument
+# Teams.
+#--------------------------------------------------------------------
+10250|MCF|~/runtime||||1
+10251|data_dictionary|~/runtime||||1
+# 
+#
+?   PRODUCT OUTPUT FILES
+# Next line is the default location for PRODUCT OUTPUT FILES
+!  ~/runtime
+#
+#  
+?   SUPPORT INPUT FILES
+# Next line is the default location for SUPPORT INPUT FILES
+!  ~/runtime
+#
+#  
+# -----------------------------------------------------------------------
+# This ID is #defined in PGS_AA_Tools.h
+# This file contains the IDs for all support and format files shown above
+# -----------------------------------------------------------------------
+10900|indexFile|~/runtime||||1
+#
+# -----------------------------------------------------------------------
+# These are support files for the data set files - to be created by user
+# (not necessar
+# The IDs must correspond to the logical IDs in the index file
+# -----------------------------------------------------------------------
+10901|mowe13aSupport|~/runtime||||1
+10902|owe13aSupport|~/runtime||||1
+10903|owe14Support|~/runtime||||1
+10904|etop05Support|~/runtime||||1
+10905|fnoc1Support|~/runtime||||1
+10906|fnoc2Support|~/runtime||||1
+10907|zobler1Support|~/runtime||||1
+10908|zobler2Support|~/runtime||||1
+10909|nmcRucSupport|~/runtime||||1
+10915|tbaseSupport|~/runtime||||1
+10916|tbase1Support|~/runtime||||1
+10917|tbase2Support|~/runtime||||1
+10918|tbase3Support|~/runtime||||1
+10919|tbase4Support|~/runtime||||1
+10740|usatile1Support|~/runtime||||1
+10741|usatile2Support|~/runtime||||1
+10742|usatile3Support|~/runtime||||1
+10743|usatile4Support|~/runtime||||1
+10744|usatile5Support|~/runtime||||1
+10745|usatile6Support|~/runtime||||1
+10746|usatile7Support|~/runtime||||1
+10747|usatile8Support|~/runtime||||1
+10748|usatile9Support|~/runtime||||1
+10749|usatile10Support|~/runtime||||1
+10750|usatile11Support|~/runtime||||1
+10751|usatile12Support|~/runtime||||1
+10948|geoidSupport|~/runtime||||1
+#
+# -----------------------------------------------------------------------
+# The following are format files for each data set file
+# (not necessarily a one-to-one relationship)
+# The IDs must correspond to the logical IDs in the index file
+# -----------------------------------------------------------------------
+10920|mowe13a.bfm|~/runtime||||1
+10921|owe13a.bfm|~/runtime||||1
+10922|owe14d.bfm|~/runtime||||1
+10923|owe14dr.bfm|~/runtime||||1
+10924|etop05.bfm|~/runtime||||1
+10925|fnocAzm.bfm|~/runtime||||1
+10926|fnocOcm.bfm|~/runtime||||1
+10927|fnocPt.bfm|~/runtime||||1
+10928|fnocRdg.bfm|~/runtime||||1
+10929|fnocSt.bfm|~/runtime||||1
+10930|fnocUrb.bfm|~/runtime||||1
+10931|fnocWat.bfm|~/runtime||||1
+10932|fnocMax.bfm|~/runtime||||1
+10933|fnocMin.bfm|~/runtime||||1
+10934|fnocMod.bfm|~/runtime||||1
+10935|srzArea.bfm|~/runtime||||1
+10936|srzCode.bfm|~/runtime||||1
+10937|srzPhas.bfm|~/runtime||||1
+10938|srzSlop.bfm|~/runtime||||1
+10939|srzSoil.bfm|~/runtime||||1
+10940|srzText.bfm|~/runtime||||1
+10941|nmcRucSigPotPres.bfm|~/runtime||||1
+10942|tbase.bfm|~/runtime||||1
+10943|tbase1.bfm|~/runtime||||1
+10944|tbase2.bfm|~/runtime||||1
+10945|tbase3.bfm|~/runtime||||1
+10946|tbase4.bfm|~/runtime||||1
+10700|usatile1.bfm|~/runtime||||1
+10701|usatile2.bfm|~/runtime||||1
+10702|usatile3.bfm|~/runtime||||1
+10703|usatile4.bfm|~/runtime||||1
+10704|usatile5.bfm|~/runtime||||1
+10705|usatile6.bfm|~/runtime||||1
+10706|usatile7.bfm|~/runtime||||1
+10707|usatile8.bfm|~/runtime||||1
+10708|usatile9.bfm|~/runtime||||1
+10709|usatile10.bfm|~/runtime||||1
+10710|usatile11.bfm|~/runtime||||1
+10711|usatile12.bfm|~/runtime||||1
+10947|geoidbfm|~/runtime||||1
+#
+#
+# -----------------------------------------------------------------------
+# leap seconds (TAI-UTC) file
+# -----------------------------------------------------------------------
+10301|leapsec.dat|~/database/sun5/TD||||1
+#
+# -----------------------------------------------------------------------
+# polar motion and UTC-UT1 file
+# -----------------------------------------------------------------------
+10401|utcpole.dat|~/database/sun5/CSC||||1
+#
+# -----------------------------------------------------------------------
+# earth model tags file
+# -----------------------------------------------------------------------
+10402|earthfigure.dat|~/database/sun5/CSC||||1
+#
+# -----------------------------------------------------------------------
+# directory where spacecraft ephemeris files are located
+# NOTE: This line is used to specify a directory only!
+#       The "file" field should not be altered.
+# -----------------------------------------------------------------------
+10501|.|~/database/sun5/EPH||||1
+#
+# -----------------------------------------------------------------------
+# JPL planetary ephemeris file (binary form)
+# -----------------------------------------------------------------------
+10601|de200.eos|~/database/sun5/CBP||||1
+#
+#
+?   SUPPORT OUTPUT FILES 
+# Next line is default location for SUPPORT OUTPUT FILES
+!  ~/runtime
+#
+#
+# -----------------------------------------------------------------------
+# These files support the SMF log functionality. Each run will cause
+# status information to be written to 1 or more of the Log files. To
+# simulate DAAC operations, remove the 3 Logfiles between test runs.
+# Remember: all executables within a PGE will contribute status data to 
+# the same batch of log files.
+# -----------------------------------------------------------------------
+10100|LogStatus|||||1
+10101|LogReport|||||1
+10102|LogUser|||||1
+10103|TmpStatus|||||1
+10104|TmpReport|||||1
+10105|TmpUser|||||1
+10110|MailFile|||||1
+#
+# -----------------------------------------------------------------------
+# This paramater controls the Event Logger connection from the Toolkit.
+# -----------------------------------------------------------------------
+10113|eventLogger.log|||||1
+#
+# -----------------------------------------------------------------------
+# ASCII file which stores pointers to runtime SMF files in lieu of 
+# loading them to shared memory, which is a TK5 enhancement.
+# -----------------------------------------------------------------------
+10111|ShmMem|||||1
+#
+#  
+?   USER DEFINED RUNTIME PARAMETERS
+#
+#
+# -----------------------------------------------------------------------
+# These parameters are required to support the PGS_SMF_Send...() tools.
+# If the first parameter (TransmitFlag) is disabled, then none of the
+# other parameters need to be set. By default, this functionality has been
+# disabled. To enable, set TransmitFlag to 1 and supply the other 3 
+# parameters with local information. 
+# -----------------------------------------------------------------------
+10109|TransmitFlag; 1=transmit,0=disable|0
+10106|RemoteHost|sandcrab
+10107|RemotePath|/usr/kwan/test/PC/data
+10108|EmailAddresses|kwan@eos.hitc.com
+#
+# -----------------------------------------------------------------------
+# This paramater controls the Event Logger connection from the Toolkit.
+# -----------------------------------------------------------------------
+10112|Event Logging Flag; 1=connect,0=disconnect|1
+#
+# -----------------------------------------------------------------------
+# This entry defines the IP address of the processing host and is used
+# by the Toolkit when generating unique Intermediate and Temporary file
+# names.  The Toolkit no longer relies on the PGS_HOST_PATH environment
+# variable to otain this information.
+# -----------------------------------------------------------------------
+10099|Local IP Address of 'ether'|155.157.31.87
+#
+?   INTERMEDIATE INPUT
+# Next line is default location for INTERMEDIATE INPUT FILES
+!  ~/runtime
+#
+#
+?   INTERMEDIATE OUTPUT
+# Next line is default location for INTERMEDIATE OUTPUT FILES
+!  ~/runtime
+#
+#
+?   TEMPORARY I/O
+# Next line is default location for TEMPORARY FILES
+!  ~/runtime
+#
+#
+?   END

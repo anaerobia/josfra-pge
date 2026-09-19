@@ -1,0 +1,1260 @@
+#! /bin/ksh  
+##############################################################################
+#                                                                            #
+# Name        : EcTkToolkitMkcfg                                             #
+# Author      : Guru Tej S. Khalsa                                           #
+# Description : Configures Toolkit Installation                              #
+# Date        : Mar 12, 1998                                                 #
+#                                                                            #
+# Date       Who              What                                           #
+# ----       ---------        --------------------                           #
+# 03/12/1998 Guru Tej Khalsa  Initial version                                #
+# 04/09/1998 Robert Magill    Add scriptlib function call to set_environment #
+# 06/23/1998 Megan D Spencer  Commented out the 2 lines that deleted files   #
+#                              that we did not want deleted NCR# ECSed15672  #
+#                              and NCR# ECSed15415                           #
+# 08/27/1998 Megan D Spencer  Added lines to have extra subdirectories in    #
+#                              PGSSRC/EPH/orbsim deleted for NCR# ECSed15495 #
+# 07/23/1998 Megan D Spencer  Uncommented line that had been accidently      #
+#                              commented out for NCR # 15677                 #
+# 08/12/1998 Megan D Spencer  Made change to get rid of recursive link       #
+#                              of TOOLKIT directory NCR #15256               #
+# 09/30/1998 Megan D Spencer  Updated to check for link/directory existence  #
+#                              during mkcfg for NCR#ECSed15960               #
+# 10/30/1998 Megan D Spencer  Updated for the All directory Links            #
+#                              to not be created  NCR#ECSed17807             #
+# 11/06/1998 Megan D Spencer  Updated so that sun directory correctly        #
+#                              reflects f77 installation NCR#ECSed18993      #
+# 11/06/1998 Megan D Spencer  Updated so that the environment scripts are    #
+#                              current for DaacDeliver build. NCR#ECSed17209,#
+#                              NCR#18994, NCR#18991                          #
+# 11/11/1998 Megan D Spencer  Updated so that the environment scripts are    #
+#                              current for DaacDeliver build. NCR#ECSed17209,#
+#                              NCR#18994, NCR#18991                          #
+# 01/19/1998 Megan D Spencer  Updated so that the PDPS links needed are part #
+#                              of this script for NCR#ECSed14806             #
+# 09/07/1999 Damian Anderson  NCR ECSed20704: Return success/failure status. #
+# 09/07/1999 Megan D Spencer  Threadsafe section added-new functionality     #
+# 02/23/2000 Abe Taaheri/                                                    #
+#            Yangling Huang   Modified CPP and TSF sections                  #
+# 03/07/2000 Abe Taaheri      changed hdf4.1r1 to HDF4.1r5                   #
+# 03/14/2000 Abe Taaheri      Removed flavors for sgi old32                  #
+# 04/22/200  Yangling Huang   NCR ECSed21212, ECSed22680, ECSed24676,        #
+#                             ECSed24677, ECSed24679,                        # 
+# 09/20/2000 Phuong T. Nguyen NCR ECSed27539,ECSed27680 correct TOOLKIT      #
+#                             version for PCF files                          #
+# 11/16/2000 Phuong T. Nguyen NCR ECSed19634, validate toolkit installation  #
+# 02/14/2001 Adura Adekunjo   Modified so that VERSION is updated during     #
+#                             MODE installation. NCR ECSed29757              # 
+# 04/19/2001 Phuong T. Nguyen NCR ECSed30571, solved permision problem for   #
+#                             Validate_Toolkit.sh                            #
+# 06/28/2001 Abe Taaheri      Modified to support HDF5                       #
+# 05/08/2002 Adura Adekunjo   Changed HDF4.1r3 to HDF4.1r5                   #
+# 05/14/2002 Adura Adekunjo   Changed hdf5-1.4.1 to hdf5-1.4.3               #
+# 02/24/2003 Adura Adekunjo   Changed hdf5-1.4.3 to hdf5-1.4.4               #
+# 04/15/2007 Abe Taaheri      Added more unsupported platforms               #
+#                                                                            #
+##############################################################################
+
+# Export all variables
+set -o allexport
+
+[ $# -eq 0 ] && print "Usage: $0 MODE" && exit 1
+
+MODE=$1
+eval $(EcCoScriptlib set_environment $MODE)
+
+# Make sure needed variables are set
+[ -z "$ECS_HOME"	] && NOTSET="$NOTSET ECS_HOME"
+
+[ ! -z "$NOTSET" ] && {
+	print "Re-run after setting the following environment variables:
+$NOTSET"
+	exit 1
+}
+
+
+SUBSYS=TOOLKIT
+CUSTOM=${ECS_HOME}/${MODE}/CUSTOM
+
+EcCoScriptlib check_dirs $CUSTOM || exit 1
+
+COMPONENT=EcTk
+eval $(EcCoScriptlib set_cfgparms $MODE $SUBSYS $COMPONENT $(basename $0))
+
+#########################
+#  T E J                #
+#########################
+common_tk=${CUSTOM}/TOOLKIT/toolkit
+
+# seriously hacked up script needs to be reworked to be more generic
+# and thoroughly commented
+
+tsf_libs=0
+typeset -u InstallThreadsafeLibs
+case "$InstallThreadsafeLibs" in
+    "TRUE")
+	workspace=${CUSTOM}
+        tsf_libs=1
+	;;
+    *)
+	workspace=${CUSTOM}/TOOLKIT
+        unsupported="$unsupported `cd $common_tk/lib; ls -d *_r*`"
+	;;
+esac
+
+
+old_install=0
+typeset -u UseOldInstallMethod
+case "$UseOldInstallMethod" in
+    "TRUE")
+	workspace=${CUSTOM}
+	old_install=1
+	;;
+    *)
+	workspace=${CUSTOM}/TOOLKIT
+	;;
+esac
+
+unsupported="dec hp10 hp ibm sgi6n32 sgi sgi6 sgi32 sgi64 sun4 sun5 sun5.5 sun5.8 sun5.9 sun5.10 linux irix65 macintosh"
+install_sgi=1
+typeset -u InstallSgiLibs
+case "$InstallSgiLibs" in
+    "FALSE")
+unsupported="$unsupported `cd $common_tk/lib; ls -d *sgi*_*`"
+        install_sgi=0
+	;;
+esac
+
+  if [ -d ${common_tk}/lib/sun5 ] ; then
+    mv ${common_tk}/lib/sun5 ${common_tk}/lib/sun5_daac_f77
+  fi
+
+  if [ -d ${common_tk}/bin/sun5 ] ; then
+    mv ${common_tk}/bin/sun5 ${common_tk}/bin/sun5_daac_f77
+  fi
+
+  if [ -d ${common_tk}/bin/sun5_daac_f77 ] ; then
+    cd ${common_tk}/bin/sun5_daac_f77
+  fi
+
+  if [ -d ${common_tk}/bin/sun5_daac_f77/tmp ] ; then
+      cd ${common_tk}/bin
+      if [ ! -d tmp ] ; then
+	mkdir -p tmp
+      fi
+    fi
+
+    if [ -d ${common_tk}/bin/tmp ] ; then
+       mkdir -p ${common_tk}/bin/tmp
+    fi
+
+    if [ ! -d ${CUSTOM}/backup ] ; then
+
+       cd ${CUSTOM}
+       mkdir -p backup
+    fi
+
+    cd ${CUSTOM}/backup
+    if [  ! -d tmp ] ; then
+       mkdir -p tmp
+    fi
+
+    bckdir=${CUSTOM}/backup
+    date '+%m%d%y%H%M%S' | read today
+
+    if [ -d ${common_tk}/bin/sun5_daac_f77/tmp ] ; then
+
+       if [ tsf_libs -eq 1 ] ; then
+         if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.tsf.tmp ] ; then
+	   cp  ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.tsf.tmp ${bckdir}/tmp/pgs-dev-env.csh.tsf.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.tsf.tmp  ${common_tk}/bin/tmp
+         fi
+        
+         if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.tsf.tmp ] ; then
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.tsf.tmp ${bckdir}/tmp/pgs-dev-env.ksh.tsf.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.tsf.tmp  ${common_tk}/bin/tmp
+         fi
+
+         if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.tsf.tmp ] ; then
+	   cp  ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.tsf.tmp ${bckdir}/tmp/pgs-env.csh.tsf.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.tsf.tmp  ${common_tk}/bin/tmp
+         fi
+       
+         if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.tsf.tmp ] ; then
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.tsf.tmp ${bckdir}/tmp/pgs-env.ksh.tsf.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.tsf.tmp  ${common_tk}/bin/tmp
+         fi
+
+       fi
+
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.cpp.tmp ] ; then
+	   cp  ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.cpp.tmp ${bckdir}/tmp/pgs-dev-env.csh.cpp.tmp.$today
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.cpp.tmp  ${common_tk}/bin/tmp
+       fi
+      
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.cpp.tmp ] ; then
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.cpp.tmp ${bckdir}/tmp/pgs-dev-env.ksh.cpp.tmp.$today
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.cpp.tmp  ${common_tk}/bin/tmp
+       fi
+
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.cpp.tmp ] ; then
+	   cp  ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.cpp.tmp ${bckdir}/tmp/pgs-env.csh.cpp.tmp.$today
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.cpp.tmp  ${common_tk}/bin/tmp
+       fi
+     
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.cpp.tmp ] ; then
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.cpp.tmp ${bckdir}/tmp/pgs-env.ksh.cpp.tmp.$today
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.cpp.tmp  ${common_tk}/bin/tmp
+       fi
+
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.tmp ] ; then
+	   cp  ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.tmp ${bckdir}/tmp/pgs-dev-env.csh.tmp.$today
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.tmp  ${common_tk}/bin/tmp
+       fi
+      
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.tmp ] ; then
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.tmp ${bckdir}/tmp/pgs-dev-env.ksh.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.tmp  ${common_tk}/bin/tmp
+       fi 
+    
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.daac.tmp ] ; then
+           cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.daac.tmp ${bckdir}/tmp/pgs-dev-env.csh.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.csh.daac.tmp  ${common_tk}/bin/tmp/
+       fi
+      
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.daac.tmp ] ; then
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.daac.tmp  ${bckdir}/tmp/pgs-dev-env.ksh.daac.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-dev-env.ksh.daac.tmp  ${common_tk}/bin/tmp
+       fi
+    
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.tmp ] ; then
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.tmp ${bckdir}/tmp/pgs-env.csh.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.tmp  ${common_tk}/bin/tmp
+       fi
+
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.tmp ] ; then
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.tmp ${bckdir}/tmp/pgs-env.ksh.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.tmp  ${common_tk}/bin/tmp
+       fi
+
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.daac.tmp ] ; then
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.daac.tmp ${bckdir}/tmp/pgs-env.csh.daac.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.csh.daac.tmp  ${common_tk}/bin/tmp
+       fi
+
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.daac.tmp ] ; then
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.daac.tmp ${bckdir}/tmp/pgs-env.ksh.daac.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/pgs-env.ksh.daac.tmp  ${common_tk}/bin/tmp
+       fi
+
+       if [ -f ${common_tk}/bin/sun5_daac_f77/tmp/Validate_Toolkit.sh.tmp ] ; then
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/Validate_Toolkit.sh.tmp ${bckdir}/tmp/Validate_Toolkit.sh.tmp.$today
+	   cp ${common_tk}/bin/sun5_daac_f77/tmp/Validate_Toolkit.sh.tmp  ${common_tk}/bin/tmp
+       fi
+      cd ${common_tk}/bin/sun5_daac_f77
+#	\rm -rf ${common_tk}/bin/sun5_daac_f77/tmp
+    fi
+
+#corrected problem from NCR #15677
+typeset -u InstallSunLib
+case "$InstallSunLib" in
+    "FALSE")
+        if [ -d $common_tk/lib/*sun* ]; then
+          sundir=$common_tk/lib/*sun*
+        else 
+          sundir=""
+        fi
+        unsupported="$unsupported ${sundir}"
+	#unsupported="$unsupported `cd $common_tk/lib; ls -d *sun*`"
+	install_sun=0
+	;;
+esac
+
+install_scf=1
+typeset -u InstallScfLibs
+case "$InstallScfLibs" in
+    "FALSE")
+	unsupported="$unsupported `cd $common_tk/lib; ls -d *scf*`"
+	install_scf=0
+	;;
+esac
+
+install_daac=1
+typeset -u InstallDaacLibs
+case "$InstallDaacLibs" in
+    "FALSE")
+	unsupported="$unsupported `cd $common_tk/lib; ls -d *daac*`"
+	install_daac=0
+	;;
+esac
+
+install_f77=1
+typeset -u InstallF77Libs
+case "$InstallF77Libs" in
+    "FALSE")
+	unsupported="$unsupported `cd $common_tk/lib; ls -d *f77*`"
+	install_f77=0
+	;;
+esac
+
+install_f90=1
+typeset -u InstallF90Libs
+case "$InstallF90Libs" in
+    "FALSE")
+	unsupported="$unsupported `cd $common_tk/lib; ls -d *f90*`"
+	install_f90=0
+	;;
+esac
+
+install_opt=1
+typeset -u InstallOptimizedLibs
+case "$InstallOptimizedLibs" in
+    "FALSE")
+	unsupported="$unsupported `cd $common_tk/lib; ls -d *_f77 *_f90`"
+	install_opt=0
+	;;
+esac
+
+install_dbug=1
+typeset -u InstallDebugLibs
+case "$InstallDebugLibs" in
+    "FALSE")
+	unsupported="$unsupported `cd $common_tk/lib; ls -d *debug`"
+	install_dbug=0
+	;;
+esac
+
+keep_bckups=1
+typeset -u KeepBackUps
+case "$KeepBackUps" in
+    "FALSE")
+	keep_bckups=0
+	;;
+    "TRUE")
+	  ;;
+esac
+
+sun_only=1
+typeset -u SunOnlyTarFile
+case "$SunOnlyTarFile" in
+
+    "FALSE")
+	sun_only=0
+	;;
+esac
+
+# clean up unsupported list
+tmp_unsupported=""
+for tmp_name in $unsupported ; do
+    found_name=0
+    for name in $tmp_unsupported ; do
+	if [ $tmp_name = $name ] ; then
+	    found_name=1
+	    break
+	fi
+    done
+    if [ $found_name = 0 ] ; then
+	   tmp_unsupported="$tmp_unsupported $tmp_name"
+    fi
+done
+unsupported="$tmp_unsupported"
+
+# removing unsupported DAAC architectures...
+cd $common_tk
+for dir in bin lib ; do
+     for sub_dir in $unsupported ; do
+	if [ -d ${common_tk}/${dir}/${sub_dir} ] ; then
+	  \rm -rf ${common_tk}/${dir}/${sub_dir}
+	fi
+    done
+done
+
+# removing makefiles and dot files...
+#find ${common_tk} -name "*akefile*" -exec rm -f {} \;
+#find ${common_tk} -name ".???*" -exec rm -f {} \;
+# removing INSTALL scripts...
+find ${common_tk}/bin -name "INSTALL*" -exec rm -f {} \;
+find ${common_tk}/bin -name "mk*" -exec rm -f {} \;
+# removing large de200.dat file...
+# found that we wanted to keep this file after all NCR # ECSed15672
+#rm -rf $common_tk/database/common/CBP
+
+
+# cleaning up runtime and removing old PCFs...
+unsupported="dec hp10 hp ibm sgi sgi6n32 sun4 sun5.8 sun5.9 sun5.10"
+if [ install_sgi = 0 ] ; then
+    unsupported="$unsupported sgi32 sgi64"
+fi
+for dir in runtime database ; do
+    for sub_dir in $unsupported ; do
+	if [ -d ${common_tk}/${dir}/${sub_dir} ] ; then
+           \rm -rf ${common_tk}/${dir}/${sub_dir}
+        fi
+    done
+done
+
+# Changing to delete extra orbsim source subdirectories
+for dir in $common_tk/src/EPH/orbsim/* ; do
+    if [ -d $dir ] ; then
+	\rm -rf $dir
+    fi
+done
+
+
+#for name in $common_tk/runtime/* ; do
+#    if [ ! -d $name ] ; then
+#	rm -f $name
+#    fi
+#done
+
+cd $common_tk/runtime
+for dir in sgi32 sgi64 ; do
+    rm -f $dir/PCF.ir1
+    rm -f $dir/PCF.relA
+    cp PCF.relB0.template $dir/temp.PCF.relB0
+    tk_major_version=`egrep '#define[ \t]+PGSd_TOOLKIT_MAJOR_VERSION' $common_tk/include/PGS_SMF.h | cut -d'"' -f2`
+    tk_minor_version="DAAC"
+    tk_version="$tk_minor_version $tk_major_version"
+    sed "s/TK_VERSION_STRING/$tk_version/" $dir/temp.PCF.relB0 > $dir/temp.PCF.relB01
+    sed "s/REMOVE THIS VERSION/EDIT OR REMOVE THIS/"  $dir/temp.PCF.relB01 > $dir/temp.PCF.relB02
+    sed 's/$BRAND'"/$dir/" $dir/temp.PCF.relB02 > $dir/PCF.relB0
+    cp $dir/PCF.relB0 $dir/PCF.relB0_daac
+    sed "s/DAAC/SCF/" $dir/PCF.relB0 > $dir/PCF.relB0_scf
+    cp $dir/PCF.relB0_* $common_tk/database/$dir/PC
+    cp $dir/PCF.relB0 $common_tk/database/$dir/PC
+    rm -f $dir/temp.PCF.relB0
+    rm -f $dir/temp.PCF.relB01
+    rm -f $dir/temp.PCF.relB02
+done
+
+
+# creating single directory with links to ALL source files...
+#if [ ! -d $common_tk/src/All ] ; then
+#  mkdir $common_tk/src/All
+#  cd $common_tk/src/All
+#  find ../ -name "*.[cf]" -a -type f -exec ln -s {} . \;
+#else
+#  echo $common_tk/src/All already exists
+#fi
+regexp="#define[ \t]+PGSd_TOOLKIT_MAJOR_VERSION"
+maj_ver=`egrep "$regexp" ${common_tk}/include/PGS_SMF.h`
+maj_ver=`echo $maj_ver | cut -d'"' -f2`
+#if [ -f ${common_tk}/VERSION  ] ; then
+#    vsion=`head -1 ${common_tk}/VERSION`
+#    echo "\n"The VERSION is $vsion
+#else
+    echo  'DAAC '$maj_ver > ${common_tk}/VERSION
+    vsion=`head -1 ${common_tk}/VERSION`
+     echo "\n"The VERSION is $vsion
+#fi
+# creating faux DAAC directories...
+cd $common_tk/lib
+
+if [ -d sun5.5  ] ; then
+ \rm  -rf sun5.5
+fi
+
+cd $common_tk/bin
+if [ -d sun5.5 ] ; then
+    \rm -rf sun5.5
+fi
+
+if [ $old_install = 1 ] ; then
+
+for dir in *_*; do
+
+    if [ "$dir" = "*_*" ] ; then
+        break
+    fi
+    
+     arch=`echo $dir | cut -f1 -d_`
+	min_ver=`echo $dir | cut -f2 -d_`
+	ftn=`echo $dir | cut -f3 -d_`
+	opt_level=`echo $dir | cut -f4 -d_`
+	if [ "$opt_level" != "debug" ] ; then
+	    opt_level=""
+	else
+	  opt_level="_$opt_level"
+	fi
+    version=`echo $min_ver | tr "[:lower:]" "[:upper:]"`" $maj_ver"
+
+
+    pgshome=${workspace}/${min_ver}_toolkit_${ftn}${opt_level}
+
+    if [ ! -d $pgshome ] ; then
+        echo Creating ${pgshome} Directory...
+	mkdir $pgshome
+    fi
+#Changing for NCR#15256
+#	(cd $pgshome; ln -s . TOOLKIT)
+
+	cd $pgshome
+
+        if [ ! -d TOOLKIT ] ; then
+	    echo Creating TOOLKIT Directory... 
+	    ln -s $ECS_HOME/$MODE/CUSTOM/TOOLKIT TOOLKIT
+        fi
+
+	cd $pgshome
+
+	if [ ! -d toolkit ] ; then
+            echo Creating toolkit Directory...
+	    ln -s $ECS_HOME/$MODE/CUSTOM/TOOLKIT/toolkit toolkit
+        fi
+          
+            if [ -f ${pgshome}/VERSION ]; then
+	    chmod 775 ${pgshome}/VERSION
+            touch ${pgshome}/VERSION
+            fi
+
+	for sub_dir in database doc include message runtime ; do
+	  if [ ! -d $pgshome/$sub_dir ] ; then
+	     ln -s ${common_tk}/$sub_dir $pgshome/$sub_dir
+          fi
+	done
+	
+        if [ ! -d  $pgshome/bin ] ; then
+            echo Creating $pgshome/bin Directory... 
+     	    mkdir $pgshome/bin
+        fi
+
+
+        if [ ! -d  $pgshome/lib ] ; then
+          echo Creating  $pgshome/lib Directory... 
+	  mkdir $pgshome/lib
+	fi
+
+
+	if [ -f  $pgshome/VERSION ] ; then
+	  chmod 775 $pgshome/VERSION
+        else
+	  cp ${common_tk}/VERSION $pgshome/VERSION
+          chmod 775 $pgshome/VERSION
+	fi
+      
+ 
+        if [ "$opt_level" = "_debug" -a ! -d $pgshome/src ] ; then
+          echo Creating $pgshome/src Directory... 
+          ln -s ${common_tk}/src $pgshome/src
+        fi
+
+
+        if [ ! -d $pgshome/bin/$arch ] ; then
+           echo Creating $pgshome/bin/$arch Directory... 
+           ln -s $common_tk/bin/$dir $pgshome/bin/$arch
+        fi
+
+
+        if [ ! -d  $pgshome/lib/$arch ] ; then
+           echo Creating $pgshome/lib/$arch Directory... 
+           ln -s $common_tk/lib/$dir $pgshome/lib/$arch
+        fi
+
+done
+fi
+# The directory hierarchy looks as follows:
+#
+# ${CUSTOM}/TOOLKIT/toolkit
+#
+# The "old" directory hierarchy looks as follows:
+#
+# ${CUSTOM}/daac_toolkit_f77/TOOLKIT/toolkit
+# ${CUSTOM}/daac_toolkit_f90/TOOLKIT/toolkit
+# ${CUSTOM}/scf_toolkit_f77/TOOLKIT/toolkit
+# ${CUSTOM}scf_toolkit_f90//TOOLKIT/toolkit
+# ${CUSTOM}/daac_toolkit_f77_debug/TOOLKIT/toolkit
+# ${CUSTOM}daac_toolkit_f90_debug//TOOLKIT/toolkit
+# ${CUSTOM}/scf_toolkit_f77_debug/TOOLKIT/toolkit
+# ${CUSTOM}/scf_toolkit/TOOLKIT/toolkit
+
+
+pgshome=${common_tk}
+
+tk_bin=${tk_home}/bin
+
+if [ tsf_libs -eq 1 ] ; then
+  
+  for dir in sgi32_scf_r sgi32_scf_r_debug sgi32_daac_r sgi32_daac_r_debug  sgi64_scf_r sgi64_scf_r_debug sgi64_daac_r sgi64_daac_r_debug ; do
+
+    arch=`echo $dir | cut -f1 -d_`
+    min_ver=`echo $dir | cut -f2 -d_`
+    ftn=`echo $dir | cut -f3 -d_`
+    opt_level=`echo $dir | cut -f4 -d_`
+    if [ "$opt_level" != "debug" ] ; then
+        opt_level=""
+	opt_flag="-O"
+    else
+        opt_level="_$opt_level"
+	opt_flag="-g"
+    fi
+
+    tsf="r"
+    flvr_tsf=${min_ver}_${tsf}$opt_level
+    case $ARCH in
+	 hp10)
+	    brand=hp
+	    ;;
+	 sgi6n32)
+	    brand=sgi32
+	    sgi_mode=n32
+	    f90_comp="/usr/bin/f90 -n32"
+	    ;;
+	 sgi6)
+	    brand=sgi64
+	    sgi_mode=64
+	    f90_comp="/usr/bin/f90 -64"
+	    ;;
+	 sun5.5)
+	    brand=sun5
+	    ;;
+	 *)
+	    brand=${ARCH}
+	    ;;
+   esac
+
+current_hdf="HDF4.2r1"
+current_hdf5="hdf5-1.6.5"
+hdf_base=${CUSTOM}/HDF
+opt_lvl=-0
+	case $arch in
+	sgi32)
+	    brand=sgi32
+	    sgi_mode=n32
+            num=n32
+
+	    ;;
+	sgi64)
+	    num=64
+	    ;;
+	sun5)
+	    brand=sun5
+	    num=""
+	    ;;
+	esac
+
+	nag_flag=0
+	daac_flag=0
+	min_ver=`echo ${flvr_tsf} | cut -f1 -d_`
+	case $min_ver in
+	    "daac")
+		daac_flag=1
+		;;
+	esac
+
+	ftn_mode=""
+	f90_comp=""
+	tmpdir=${pgshome}/bin/tmp
+	pgshome=${common_tk}
+	tk_bin=${pgshome}/bin
+
+	hdflib=$hdf_base/${arch}_debug/$current_hdf/lib
+	hdfinc=$hdf_base/${arch}_debug/$current_hdf/include
+	hdf5lib=$hdf_base/${arch}_debug/$current_hdf5/lib
+	hdf5inc=$hdf_base/${arch}_debug/$current_hdf5/include
+
+	  if [ ! -d ${CUSTOM}/backup ] ; then
+
+	    cd ${CUSTOM}
+	    mkdir -p backup
+	    cd backup
+	  fi
+          bckdir=${CUSTOM}/backup
+	  cd $bckdir
+	  flvr_dir_tsf=${tk_bin}/${arch}_${flvr_tsf}
+	  if [ $keep_bckups = 1 ] ; then
+             if [ ! -d ${bckdir}/${arch}_${flvr_tsf}_backup ] ; then
+
+		mkdir -p ${bckdir}/${arch}_${flvr_tsf}_backup
+	    fi
+	    date '+%m%d%y%H%M%S' | read today
+
+	   
+	    if  [ -f ${flvr_dir_tsf}/pgs-env.csh ] ; then
+		mv ${flvr_dir_tsf}/pgs-env.csh.tsf ${bckdir}/${arch}_${flvr_tsf}_backup/pgs-env.csh.tsf.${today}
+	    fi
+	    if  [ -f ${flvr_dir_tsf}/pgs-env.ksh ] ; then
+		mv ${flvr_dir_tsf}/pgs-env.ksh.tsf ${bckdir}/${arch}_${flvr_tsf}_backup/pgs-env.ksh.tsf.${today}
+	    fi
+	    if  [ -f ${flvr_dir_tsf}/pgs-dev-env.csh.tsf ] ; then
+		mv ${flvr_dir_tsf}/pgs-dev-env.csh.tsf ${bckdir}/${arch}_${flvr_tsf}_backup/pgs-dev-env.csh.tsf.${today}
+	    fi
+	    if  [ -f ${flvr_dir_tsf}/pgs-dev-env.ksh.tsf ] ; then
+		mv ${flvr_dir_tsf}/pgs-dev-env.ksh.tsf   ${bckdir}/${arch}_${flvr_tsf}_backup/pgs-dev-env.ksh.tsf.${today}
+	    fi
+	  else
+	    if  [  -d  ${bckdir}/${arch}_${flvr_tsf}_backup ] ; then
+	      \rm -rf ${bckdir}/${arch}_${flvr_tsf}_backup
+	    fi
+	  fi
+	  if [ -f ${flvr_dir_tsf}/pgs-dev-env.csh.tsf ] ; then
+		\rm ${flvr_dir_tsf}/pgs-dev-env.csh.tsf
+          fi
+          if [ -f ${flvr_dir_tsf}/pgs-dev-env.ksh.tsf ] ; then
+		\rm ${flvr_dir_tsf}/pgs-dev-env.ksh.tsf
+
+          fi
+          if [ -f ${flvr_dir_tsf}/pgs-env.csh.tsf ] ; then
+		\rm ${flvr_dir_tsf}/pgs-env.csh.tsf
+          fi
+          if [ -f ${flvr_dir_tsf}/pgs-env.ksh.tsf ] ; then
+                \rm ${flvr_dir_tsf}/pgs-env.ksh.tsf
+          fi
+
+	  
+	  if [ $sun_only = 1 ] ; then
+	     \rm -rf sgi*_*
+	  fi
+
+	pgsobj=$pgshome/obj/${arch}_${flvr_tsf}
+	pgslib=$pgshome/lib/${arch}_${flvr_tsf}
+	pgsbin=$pgshome/bin/${arch}_${flvr_tsf}
+	pgsdat=$pgshome/database/${arch}
+	if [  -d $pgsbin ] ; then
+		cd $pgsbin
+                hdfhome=${CUSTOM}/HDF/${arch}/${current_hdf}
+                hdf5home=${CUSTOM}/HDF/${arch}/${current_hdf5}
+		hdfeoshome=${CUSTOM}/HDFEOS/hdfeos
+		hdfeos5home=${CUSTOM}/HDFEOS/hdfeos5
+	        echo "setenv PGSHOME $pgshome" > pgs-dev-env.csh.tsf
+		echo "setenv HDFHOME $hdfhome" >> pgs-dev-env.csh.tsf
+		echo "setenv HDF5HOME $hdf5home" >> pgs-dev-env.csh.tsf
+		echo "setenv HDFEOS_HOME $hdfeoshome" >> pgs-dev-env.csh.tsf
+		echo "setenv HDFEOS5_HOME $hdfeos5home" >> pgs-dev-env.csh.tsf
+		echo "set sgi_mode=$num" >> pgs-dev-env.csh.tsf
+		echo "set pgs_daac=$daac_flag" >> pgs-dev-env.csh.tsf
+		echo "set pgs_f90_comp=$f90_comp" >>  pgs-dev-env.csh.tsf
+		echo "set pgs_nag_flag=$nag_flag" >> pgs-dev-env.csh.tsf
+		echo "set use_flavor=1" >> pgs-dev-env.csh.tsf
+		echo "set use_flavor_r=1" >> pgs-dev-env.csh.tsf
+		echo "set flavor_r=$flvr_tsf" >> pgs-dev-env.csh.tsf
+		echo "set pgs_c_rlib=1" >> pgs-dev-env.csh.tsf
+		echo "set opt_flag=$opt_flag" >> pgs-dev-env.csh.tsf
+#		cat $tmpdir/pgs-dev-env.csh.tsf.tmp >> pgs-dev-env.csh.tsf
+		sed "s^OPT_LVL^$opt_flag^" $tmpdir/pgs-dev-env.csh.tsf.tmp >> pgs-dev-env.csh.tsf	
+
+		echo "PGSHOME=$pgshome" > pgs-dev-env.ksh.tsf
+		echo "HDFHOME=$hdfhome" >> pgs-dev-env.ksh.tsf
+		echo "HDF5HOME=$hdf5home" >> pgs-dev-env.ksh.tsf
+		echo "HDFEOS_HOME=$hdfeoshome" >> pgs-dev-env.ksh.tsf
+		echo "HDFEOS5_HOME=$hdfeos5home" >> pgs-dev-env.ksh.tsf
+		echo "sgi_mode=$num" >> pgs-dev-env.ksh.tsf
+		echo "pgs_daac=$daac_flag" >> pgs-dev-env.ksh.tsf
+		echo "pgs_f90_comp=$f90_comp" >>  pgs-dev-env.ksh.tsf
+		echo "pgs_nag_flag=$nag_flag" >> pgs-dev-env.ksh.tsf
+		echo "use_flavor=1" >> pgs-dev-env.ksh.tsf
+		echo "flavor_r=$flvr_tsf" >> pgs-dev-env.ksh.tsf
+		echo "use_flavor_r=1" >> pgs-dev-env.ksh.tsf
+		echo "pgs_c_rlib=1" >> pgs-dev-env.ksh.tsf
+		echo "opt_flag=$opt_flag" >> pgs-dev-env.ksh.tsf
+#		cat $tmpdir/pgs-dev-env.ksh.tsf.tmp >> pgs-dev-env.ksh.tsf
+		sed "s^OPT_LVL^$opt_flag^" $tmpdir/pgs-dev-env.ksh.tsf.tmp >> pgs-dev-env.ksh.tsf
+
+		echo "setenv PGSHOME $pgshome" > pgs-env.csh.tsf
+		echo "set sgi_mode=$num" >> pgs-env.csh.tsf
+		echo "set use_flavor=1" >> pgs-env.csh.tsf
+                echo "set use_flavor_r=1" >> pgs-env.csh.tsf
+		echo "set flavor_r=$flvr_tsf" >> pgs-env.csh.tsf
+		echo "set pgs_c_rlib=1" >> pgs-env.csh.tsf
+		cat $tmpdir/pgs-env.csh.tsf.tmp >> pgs-env.csh.tsf
+
+		echo "PGSHOME=$pgshome" > pgs-env.ksh.tsf
+		echo "sgi_mode=$num" >> pgs-env.ksh.tsf
+		echo "use_flavor=1" >> pgs-env.ksh.tsf
+		echo "use_flavor_r=1" >> pgs-env.ksh.tsf
+		echo "flavor_r=$flvr_tsf" >> pgs-env.ksh.tsf
+		echo "pgs_c_rlib=1" >> pgs-env.ksh.tsf
+		cat $tmpdir/pgs-env.ksh.tsf.tmp >> pgs-env.ksh.tsf
+
+
+	fi
+  done
+
+fi
+
+tmpdir=${pgshome}/bin/tmp
+if [ -f $pgshome/bin/Validate_Toolkit.sh ] ; then
+    \rm -rf $pgshome/bin/Validate_Toolkit.sh
+    cp $tmpdir/Validate_Toolkit.sh.tmp $pgshome/bin/Validate_Toolkit.sh
+    chmod 555 $pgshome/bin/Validate_Toolkit.sh
+else 
+    cp $tmpdir/Validate_Toolkit.sh.tmp $pgshome/bin/Validate_Toolkit.sh
+    chmod 555 $pgshome/bin/Validate_Toolkit.sh
+fi
+
+for dir in sgi32_scf_f77 sgi32_scf_f77_debug sgi32_scf_f90 sgi32_scf_f90_debug sgi32_daac_f77 sgi32_daac_f77_debug sgi32_daac_f90 sgi32_daac_f90_debug sgi64_scf_f77 sgi64_scf_f77_debug sgi64_scf_f90 sgi64_scf_f90_debug sgi64_daac_f77 sgi64_daac_f77_debug sgi64_daac_f90 sgi64_daac_f90_debug ; do
+
+    arch=`echo $dir | cut -f1 -d_`
+    min_ver=`echo $dir | cut -f2 -d_`
+    ftn=`echo $dir | cut -f3 -d_`
+    opt_level=`echo $dir | cut -f4 -d_`
+    if [ "$opt_level" != "debug" ] ; then
+        opt_level=""
+	opt_flag="-O"
+    else
+        opt_level="_$opt_level"
+	opt_flag="-g"
+    fi
+
+    flavor=${min_ver}_${ftn}${opt_level}
+    case $ARCH in
+	 hp10)
+	    brand=hp
+	    ;;
+	 sgi6n32)
+	    brand=sgi32
+	    sgi_mode=n32
+	    f90_comp="/usr/bin/f90 -n32"
+	    ;;
+	 sgi6)
+	    brand=sgi64
+	    sgi_mode=64
+	    f90_comp="/usr/bin/f90 -64"
+	    ;;
+	 sun5.5)
+	    brand=sun5
+	    ;;
+	 *)
+	    brand=${ARCH}
+	    ;;
+   esac
+
+current_hdf="HDF4.2r1"
+current_szip="szip-2.0"
+current_hdf5="hdf5-1.6.5"
+hdf_base=${CUSTOM}/HDF
+opt_lvl=-0
+	case $arch in
+	sgi32)
+	    brand=sgi32
+	    sgi_mode=n32
+	    f90_comp="/usr/bin/f90 -n32"
+	    num=n32
+	    ;;
+	sgi64)
+	    num=64
+	    ;;
+	sun5)
+	    brand=sun5
+	    num=""
+	    ;;
+	esac
+
+	f90_comp=/usr/bin/f90
+	nag_flag=0
+	daac_flag=0
+	min_ver=`echo ${flavor} | cut -f1 -d_`
+	case $min_ver in
+	    "daac")
+		daac_flag=1
+		;;
+	esac
+
+
+	ftn_mode=`echo ${flavor} | cut -f2 -d_`
+	case $ftn_mode in
+	    "f90")
+		f90_comp=""
+		;;
+	esac
+	tmpdir=${pgshome}/bin/tmp
+	pgshome=${common_tk}
+	tk_bin=${pgshome}/bin
+
+	hdflib=$hdf_base/${arch}_debug/$current_hdf/lib
+	hdfinc=$hdf_base/${arch}_debug/$current_hdf/include
+        sziplib=$hdf_base/${arch}_debug/$current_szip/lib
+        szipinc=$hdf_base/${arch}_debug/$current_szip/include
+	hdf5lib=$hdf_base/${arch}_debug/$current_hdf5/lib
+	hdf5inc=$hdf_base/${arch}_debug/$current_hdf5/include
+
+	  if [ ! -d ${CUSTOM}/backup ] ; then
+
+	    cd ${CUSTOM}
+	    mkdir -p backup
+	    cd backup
+	  fi
+	  bckdir=${CUSTOM}/backup
+	  cd $bckdir
+	  flvr_dir=${tk_bin}/${arch}_${flavor}
+	  if [ $keep_bckups = 1 ] ; then
+	    if [ ! -d ${bckdir}/${arch}_${flavor}_backup ] ; then
+
+		mkdir -p ${bckdir}/${arch}_${flavor}_backup
+	    fi
+	    date '+%m%d%y%H%M%S' | read today
+
+	    if  [ -f ${flvr_dir}/pgs-env.csh ] ; then
+		mv ${flvr_dir}/pgs-env.csh ${bckdir}/${arch}_${flavor}_backup/pgs-env.csh.${today}
+	    fi
+	    if  [ -f ${flvr_dir}/pgs-env.ksh ] ; then
+		mv ${flvr_dir}/pgs-env.ksh ${bckdir}/${arch}_${flavor}_backup/pgs-env.ksh.${today}
+
+	    fi
+            if  [ -f ${flvr_dir}/pgs-dev-env.csh ] ; then
+		mv ${flvr_dir}/pgs-dev-env.csh ${bckdir}/${arch}_${flavor}_backup/pgs-dev-env.csh.${today}
+            fi
+            if  [ -f ${flvr_dir}/pgs-dev-env.ksh ] ; then
+		mv ${flvr_dir}/pgs-dev-env.ksh   ${bckdir}/${arch}_${flavor}_backup/pgs-dev-env.ksh.${today}
+            fi
+	  else
+	    if  [  -d  ${bckdir}/${arch}_${flavor}_backup ] ; then
+	      \rm -rf ${bckdir}/${arch}_${flavor}_backup
+	    fi
+	  fi
+          if [ -f ${flvr_dir}/pgs-dev-env.csh ] ; then
+		\rm ${flvr_dir}/pgs-dev-env.csh
+          fi
+          if [ -f ${flvr_dir}/pgs-dev-env.ksh ] ; then
+         	\rm ${flvr_dir}/pgs-dev-env.ksh
+          fi
+          if [ -f ${flvr_dir}/pgs-env.csh ] ; then
+		\rm ${flvr_dir}/pgs-env.csh
+          fi
+          if [ -f ${flvr_dir}/pgs-env.ksh ] ; then
+		\rm ${flvr_dir}/pgs-env.ksh
+          fi
+	  
+          if [ $sun_only = 1 ] ; then
+	     \rm -rf sgi*_*
+
+          fi
+
+	pgsobj=$pgshome/obj/${arch}_${flavor}
+	pgslib=$pgshome/lib/${arch}_${flavor}
+	pgsbin=$pgshome/bin/${arch}_${flavor}
+	pgsdat=$pgshome/database/${arch}
+	if [  -d $pgsbin ] ; then
+		cd $pgsbin
+		hdfhome=${CUSTOM}/HDF/${arch}/${current_hdf}
+                sziphome=${CUSTOM}/HDF/${arch}/${current_szip}
+                hdf5home=${CUSTOM}/HDF/${arch}/${current_hdf5}
+		hdfeoshome=${CUSTOM}/HDFEOS/hdfeos
+		hdfeos5home=${CUSTOM}/HDFEOS/hdfeos5
+		echo "setenv PGSHOME $pgshome" > pgs-dev-env.csh
+		echo "setenv HDFHOME $hdfhome" >> pgs-dev-env.csh
+                echo "setenv SZIPHOME $sziphome" >> pgs-dev-env.csh.tsf
+		echo "setenv HDF5HOME $hdf5home" >> pgs-dev-env.csh
+		echo "setenv HDFEOS_HOME $hdfeoshome" >> pgs-dev-env.csh
+		echo "setenv HDFEOS5_HOME $hdfeos5home" >> pgs-dev-env.csh
+                echo "set sgi_mode=$num" >> pgs-dev-env.csh
+		echo "set pgs_daac=$daac_flag" >> pgs-dev-env.csh
+                echo "set pgs_f90_comp=$f90_comp" >>  pgs-dev-env.csh
+                echo "set pgs_nag_flag=$nag_flag" >> pgs-dev-env.csh
+                echo "set use_flavor=1" >> pgs-dev-env.csh
+                echo "set use_flavor_r=0" >> pgs-dev-env.csh
+                echo "set flavor=$flavor" >> pgs-dev-env.csh
+                echo "set pgs_c_rlib=0" >> pgs-dev-env.csh
+                echo "set opt_flag=$opt_flag" >> pgs-dev-env.csh
+#               cat $tmpdir/pgs-dev-env.csh.daac.tmp >> pgs-dev-env.csh
+                sed "s^OPT_LVL^$opt_flag^" $tmpdir/pgs-dev-env.csh.tmp >> pgs-dev-env.csh
+
+		echo "PGSHOME=$pgshome" > pgs-dev-env.ksh
+                echo "HDFHOME=$hdfhome" >> pgs-dev-env.ksh
+                echo "SZIPHOME=$sziphome" >> pgs-dev-env.ksh
+                echo "HDF5HOME=$hdf5home" >> pgs-dev-env.ksh
+                echo "HDFEOS_HOME=$hdfeoshome" >> pgs-dev-env.ksh
+                echo "HDFEOS5_HOME=$hdfeos5home" >> pgs-dev-env.ksh
+                echo "sgi_mode=$num" >> pgs-dev-env.ksh
+                echo "pgs_daac=$daac_flag" >> pgs-dev-env.ksh
+                echo "pgs_f90_comp=$f90_comp" >>  pgs-dev-env.ksh
+                echo "pgs_nag_flag=$nag_flag" >> pgs-dev-env.ksh
+                echo "use_flavor=1" >> pgs-dev-env.ksh
+                echo "use_flavor_r=0" >> pgs-dev-env.ksh
+                echo "flavor=${flavor}" >> pgs-dev-env.ksh
+                echo "pgs_c_rlib=0" >> pgs-dev-env.ksh
+                echo "opt_flag=$opt_flag" >> pgs-dev-env.ksh
+#               cat $tmpdir/pgs-dev-env.ksh.daac.tmp >> pgs-dev-env.ksh
+                sed "s^OPT_LVL^$opt_flag^" $tmpdir/pgs-dev-env.ksh.tmp >> pgs-dev-env.ksh
+
+		echo "setenv PGSHOME $pgshome" > pgs-env.csh
+                echo "set sgi_mode=$num" >> pgs-env.csh
+                echo "set use_flavor=1" >> pgs-env.csh
+                echo "set use_flavor_r=0" >> pgs-env.csh
+                echo "set flavor=${flavor}" >> pgs-env.csh
+                echo "set pgs_c_rlib=0" >> pgs-env.csh
+                cat $tmpdir/pgs-env.csh.daac.tmp >> pgs-env.csh
+ 
+                echo "PGSHOME=$pgshome" > pgs-env.ksh
+                echo "sgi_mode=$num" >> pgs-env.ksh
+                echo "use_flavor=1" >> pgs-env.ksh
+                echo "use_flavor_r=0" >> pgs-env.ksh
+                echo "flavor=${flavor}" >> pgs-env.ksh
+                echo "pgs_c_rlib=0" >> pgs-env.ksh
+                cat $tmpdir/pgs-env.ksh.daac.tmp >> pgs-env.ksh
+
+	fi
+
+done
+
+
+for dir in sgi32_scf_cpp sgi32_scf_cpp_debug sgi32_daac_cpp sgi32_daac_cpp_debug sgi64_scf_cpp sgi64_scf_cpp_debug sgi64_daac_cpp sgi64_daac_cpp_debug ; do
+
+
+ arch=`echo $dir | cut -f1 -d_`
+    min_ver=`echo $dir | cut -f2 -d_`
+    ftn=`echo $dir | cut -f3 -d_`
+    opt_level=`echo $dir | cut -f4 -d_`
+    if [ "$opt_level" != "debug" ] ; then
+        opt_level=""
+        opt_flag="-O"
+    else
+        opt_level="_$opt_level"
+        opt_flag="-g"
+    fi
+ 
+    flavor=${min_ver}_${ftn}${opt_level}
+    case $ARCH in
+         hp10)
+            brand=hp
+            ;;
+         sgi6n32)
+            brand=sgi32
+            sgi_mode=n32
+            f90_comp="/usr/bin/f90 -n32"
+            ;;
+         sgi6)
+            brand=sgi64
+            sgi_mode=64
+            f90_comp="/usr/bin/f90 -64"
+            ;;
+         sun5.5)
+            brand=sun5
+            ;;
+         *)
+            brand=${ARCH}
+            ;;
+   esac
+current_hdf="HDF4.2r1"
+current_hdf5="hdf5-1.6.5"
+hdf_base=${CUSTOM}/HDF
+opt_lvl=-0
+        case $arch in
+        sgi32)
+            brand=sgi32
+            sgi_mode=n32
+            f90_comp="/usr/bin/f90 -n32"
+            num=n32
+            ;;
+        sgi64)
+            num=64
+            ;;
+        sun5)
+            brand=sun5
+            num=""
+            ;;
+        esac
+ 
+        f90_comp=/usr/bin/f90
+        nag_flag=0
+        daac_flag=0
+        min_ver=`echo ${flavor} | cut -f1 -d_`
+        case $min_ver in
+            "daac")
+                daac_flag=1
+                ;;
+        esac
+ 
+ 
+        ftn_mode=`echo ${flavor} | cut -f2 -d_`
+        case $ftn_mode in
+            "f90")
+                f90_comp=""
+                ;;
+        esac
+        tmpdir=${pgshome}/bin/tmp
+        pgshome=${common_tk}
+        tk_bin=${pgshome}/bin
+ 
+        hdflib=$hdf_base/${arch}_debug/$current_hdf/lib
+        hdfinc=$hdf_base/${arch}_debug/$current_hdf/include
+ 	hdf5lib=$hdf_base/${arch}_debug/$current_hdf5/lib
+	hdf5inc=$hdf_base/${arch}_debug/$current_hdf5/include
+
+          if [ ! -d ${CUSTOM}/backup ] ; then
+ 
+            cd ${CUSTOM}
+            mkdir -p backup
+            cd backup
+          fi
+          bckdir=${CUSTOM}/backup
+          cd $bckdir
+          flvr_dir=${tk_bin}/${arch}_${flavor}
+          if [ $keep_bckups = 1 ] ; then
+            if [ ! -d ${bckdir}/${arch}_${flavor}_backup ] ; then
+
+      mkdir -p ${bckdir}/${arch}_${flavor}_backup
+            fi
+            date '+%m%d%y%H%M%S' | read today
+ 
+            if  [ -f ${flvr_dir}/pgs-env.csh.cpp ] ; then
+                mv ${flvr_dir}/pgs-env.csh.cpp ${bckdir}/${arch}_${flavor}_backup/pgs-env.csh.cpp.${today}
+            fi
+            if  [ -f ${flvr_dir}/pgs-env.ksh.cpp ] ; then
+                mv ${flvr_dir}/pgs-env.ksh.cpp ${bckdir}/${arch}_${flavor}_backup/pgs-env.ksh.cpp.${today}
+            fi
+            if  [ -f ${flvr_dir}/pgs-dev-env.csh.cpp ] ; then
+                mv ${flvr_dir}/pgs-dev-env.csh.cpp ${bckdir}/${arch}_${flavor}_backup/pgs-dev-env.csh.cpp.${today}
+            fi
+            if  [ -f ${flvr_dir}/pgs-dev-env.ksh.cpp ] ; then
+                mv ${flvr_dir}/pgs-dev-env.ksh.cpp   ${bckdir}/${arch}_${flavor}_backup/pgs-dev-env.ksh.cpp.${today}
+            fi
+          else
+            if  [  -d  ${bckdir}/${arch}_${flavor}_backup ] ; then
+              \rm -rf ${bckdir}/${arch}_${flavor}_backup
+            fi
+          fi
+ 
+          if [ -f ${flvr_dir}/pgs-dev-env.csh.cpp ] ; then
+                \rm ${flvr_dir}/pgs-dev-env.csh.cpp
+          fi
+          if [ -f ${flvr_dir}/pgs-dev-env.ksh.cpp ] ; then
+                \rm ${flvr_dir}/pgs-dev-env.ksh.cpp
+          fi
+          if [ -f ${flvr_dir}/pgs-env.csh.cpp ] ; then
+                \rm ${flvr_dir}/pgs-env.csh.cpp
+          fi
+          if [ -f ${flvr_dir}/pgs-env.ksh.cpp ] ; then
+                \rm ${flvr_dir}/pgs-env.ksh.cpp
+          fi
+ 
+         
+          if [ $sun_only = 1 ] ; then
+             \rm -rf sgi*_*
+          fi
+
+	pgsobj=$pgshome/obj/${arch}_${flavor}
+        pgslib=$pgshome/lib/${arch}_${flavor}
+        pgsbin=$pgshome/bin/${arch}_${flavor}
+        pgsdat=$pgshome/database/${arch}
+        if [  -d $pgsbin ] ; then
+	  cd $pgsbin
+
+	hdfhome=${CUSTOM}/HDF/${arch}/${current_hdf}
+	hdf5home=${CUSTOM}/HDF/${arch}/${current_hdf5}
+        hdfeoshome=${CUSTOM}/HDFEOS/hdfeos
+        hdfeos5home=${CUSTOM}/HDFEOS/hdfeos5
+		
+	        echo "setenv PGSHOME $pgshome" > pgs-dev-env.csh.cpp
+		echo "setenv HDFHOME $hdfhome" >> pgs-dev-env.csh.cpp
+		echo "setenv HDF5HOME $hdf5home" >> pgs-dev-env.csh.cpp
+		echo "setenv HDFEOS_HOME $hdfeoshome" >> pgs-dev-env.csh.cpp
+		echo "setenv HDFEOS5_HOME $hdfeos5home" >> pgs-dev-env.csh.cpp
+		echo "set sgi_mode=$num" >> pgs-dev-env.csh.cpp
+		echo "set pgs_daac=$daac_flag" >> pgs-dev-env.csh.cpp
+		echo "set pgs_f90_comp=$f90_comp" >>  pgs-dev-env.csh.cpp
+		echo "set pgs_nag_flag=$nag_flag" >> pgs-dev-env.csh.cpp
+		echo "set use_flavor=1" >> pgs-dev-env.csh.cpp
+		echo "set use_flavor_r=0" >> pgs-dev-env.csh.cpp
+		echo "set flavor=$flavor" >> pgs-dev-env.csh.cpp
+		echo "set pgs_c_rlib=0" >> pgs-dev-env.csh.cpp
+		echo "set opt_flag=$opt_flag" >> pgs-dev-env.csh.cpp
+#		cat $tmpdir/pgs-dev-env.csh.cpp.tmp >> pgs-dev-env.csh.cpp
+#		mv pgs-dev-env.cpp pgs-dev-env.csh.cpp
+		sed "s^OPT_LVL^$opt_flag^" $tmpdir/pgs-dev-env.csh.cpp.tmp >> pgs-dev-env.csh.cpp	
+
+		echo "PGSHOME=$pgshome" >> pgs-dev-env.ksh.cpp
+		echo "HDFHOME=$hdfhome" >> pgs-dev-env.ksh.cpp
+		echo "HDF5HOME=$hdf5home" >> pgs-dev-env.ksh.cpp
+		echo "HDFEOS_HOME=$hdfeoshome" >> pgs-dev-env.ksh.cpp
+		echo "HDFEOS5_HOME=$hdfeos5home" >> pgs-dev-env.ksh.cpp
+		echo "sgi_mode=$num" >> pgs-dev-env.ksh.cpp
+		echo "pgs_daac=$daac_flag" >> pgs-dev-env.ksh.cpp
+		echo "pgs_f90_comp=$f90_comp" >>  pgs-dev-env.ksh.cpp
+		echo "pgs_nag_flag=$nag_flag" >> pgs-dev-env.ksh.cpp
+		echo "use_flavor=1" >> pgs-dev-env.ksh.cpp
+		echo "use_flavor_r=0" >> pgs-dev-env.ksh.cpp
+		echo "flavor=${flavor}" >> pgs-dev-env.ksh.cpp
+		echo "pgs_c_rlib=0" >> pgs-dev-env.ksh.cpp
+		echo "opt_flag=$opt_flag" >> pgs-dev-env.ksh.cpp
+#		cat $tmpdir/pgs-dev-env.ksh.cpp.tmp >> pgs-dev-env.cpp
+#		mv pgs-dev-env.cpp pgs-dev-env.ksh.cpp
+		sed "s^OPT_LVL^$opt_flag^" $tmpdir/pgs-dev-env.ksh.cpp.tmp >> pgs-dev-env.ksh.cpp	
+
+		echo "setenv PGSHOME $pgshome" > pgs-env.cpp
+		echo "set sgi_mode=$num" >> pgs-env.cpp
+		echo "set use_flavor=1" >> pgs-env.cpp
+		echo "set use_flavor_r=0" >> pgs-env.cpp	
+		echo "set flavor=${flavor}" >> pgs-env.cpp
+		echo "set pgs_c_rlib=0" >> pgs-env.cpp
+		cat $tmpdir/pgs-env.csh.cpp.tmp >> pgs-env.cpp
+		mv pgs-env.cpp pgs-env.csh.cpp
+
+		echo "PGSHOME=$pgshome" > pgs-env.cpp
+		echo "sgi_mode=$num" >> pgs-env.cpp
+		echo "use_flavor=1" >> pgs-env.cpp
+		echo "use_flavor_r=0" >> pgs-env.cpp
+		echo "flavor=${flavor}" >> pgs-env.cpp
+		echo "pgs_c_rlib=0" >> pgs-env.cpp
+		cat $tmpdir/pgs-env.ksh.cpp.tmp >> pgs-env.cpp
+		mv pgs-env.cpp pgs-env.ksh.cpp
+	fi
+
+done
+
+
+if [ $keep_bckups = 0 ]  && [ -d ${CUSTOM}/backup ] ; then
+    \rm -rf ${CUSTOM}/backup
+fi
+
+#This set of lines is included to add the links for PDPS due to
+#Old Install method support possibly being dropped
+if [ $old_install = 0 ] ; then
+  MODE=$1
+
+  if [ ! -d ${CUSTOM}/daac_toolkit_f77 ] ; then
+
+    echo ${CUSTOM}/daac_toolkit_f77 directory does not  exists.
+    echo Re-run ${CUSTOM}/utilities/EcTkLinkScript file with $1 MODE.
+ 
+    ${CUSTOM}/utilities/EcTkLinkScript $1
+
+    ret_st=$?
+    
+    [ $# -eq 0 ] && print "Usage: $0 MODE" && exit 1
+
+    if [ $ret_st = 0 ] ; then
+       echo Create a symbolic link ${CUSTOM}/TOOLKIT to ${CUSTOM}/daac_toolkit_f77 was completed successfully.
+    else if [ $ret_st != 1 ] ; then
+       echo Create a symbolic link ${CUSTOM}/TOOLKIT to ${CUSTOM}/daac_toolkit_f77 was not success.
+       else 
+            echo Please check to see if the ${CUSTOM}/TOOLKIT directory exists.
+
+         fi
+     fi
+
+
+    if [ ! -d ${CUSTOM}/daac_toolkit_f77 ] ; then
+       
+    echo ${CUSTOM}/daac_toolkit_f77 directory was not created.
+
+    echo Please rerun ${CUSTOM}/utilities/EcTkLinkScript script file with $1 MODE if it is required.
+    fi
+  fi
+fi
+
+#The lines below are not correcting the problem with environment files- for
+#some reason it looks like we cannot use the sed command.
+#        env_files="pgs-env.csh pgs-env.ksh pgs-dev-env.csh pgs-dev-env.ksh"
+#        for env_file in $env_files ; do
+#	   tmp_file=${common_tk}/bin/${dir}/${env_file}
+#	   sed "s%/ecs/formal/TOOLKIT%$common_tk%" $tmp_file | \
+#	   sed "s%/ecs/cots/hdf%$CUSTOM/HDF%" | \
+#	   sed "s%/ecs/hdfeos%$CUSTOM/HDFEOS/hdfeos%" > ${tmp_file}.tmp
+#	   mv ${tmp_file}.tmp ${tmp_file}
+#	done
+#
+
+return 0
+
+
+
+
+
+
+
+
+
+
+
+

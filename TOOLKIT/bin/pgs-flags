@@ -1,0 +1,63 @@
+#! /bin/csh -f
+#-----------------------------------------------------------------------------
+# file:	
+# 	pgs-flags
+# 
+# description:
+# 	Display environment variables defined for toolkit development.
+# 	
+# usage:
+# 	pgs-flags [-a]
+#
+# author:
+# 	Mike Sucher / A.R.C.
+# history:
+# 	04-Oct-1994 MES Initial version from POSIX version of .mppde-pgs
+# 	04-Jul-1995 MES Modified for inclusion in TK5.
+# 			
+#-----------------------------------------------------------------------------
+
+if ($?CFHFLAGS == "0") then
+    echo "Toolkit compilation flags must be set first."
+    echo  ""
+    echo "from csh: "
+    echo "    source <Toolkit-home-dir>/bin/pgs-dev-env.csh"
+    echo  ""
+    echo "from ksh: "
+    echo "    . <Toolkit-home-dir>/bin/pgs-dev-env.ksh"
+    exit
+endif
+
+if ("$1" == "-a") then			# long display
+    echo  "         CC = $CC"
+    echo  "     CFLAGS = $CFLAGS"
+    echo  "      C_CFH = $C_CFH"
+    echo  "   CFHFLAGS = $CFHFLAGS"
+    echo  "        F77 = $F77"
+    echo  "   F77FLAGS = $F77FLAGS"
+    echo  "    F77_CFH = $F77_CFH"
+    echo  "  F77_C_CFH = $F77_C_CFH"
+    echo  "  F77_C_LIB = $F77_C_LIB"
+    echo  "     HDFSYS = $HDFSYS"
+    echo  ""
+    echo  "    PGSHOME = $PGSHOME"
+    echo  "     PGSBIN = $PGSBIN"
+    echo  "     PGSINC = $PGSINC"
+    echo  "     PGSINC = $PGSINC"
+    echo  "     PGSLIB = $PGSLIB"
+    echo  "     PGSMSG = $PGSMSG"
+    echo  "     PGSRUN = $PGSRUN"
+    echo  "     PGSSRC = $PGSSRC"
+    echo  "    PGSRLIB = $PGSRLIB"
+    echo  "     PGSTST = $PGSTST"
+else					# short display
+    echo  "         CC = $CC"
+    echo  "   CFHFLAGS = $CFHFLAGS"
+    echo  "        F77 = $F77"
+    echo  "    F77_CFH = $F77_CFH"
+    echo  "     HDFSYS = $HDFSYS"
+    echo  ""
+    echo  "     PGSINC = $PGSINC"
+    echo  "     PGSLIB = $PGSLIB"
+
+endif

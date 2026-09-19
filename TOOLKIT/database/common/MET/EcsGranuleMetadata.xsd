@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This schema facilitates insertion of ECS granules  (science, PH and QA) into the ECS Inventory         -->
+<!-- A metadata file that complies to this schema needs to accompany any ECS Inventory inserts perfomed     -->
+<!-- by the Data Pool Insert or the Inventory Insert services.  The equivalent DTD  for this schema is also -->
+<!-- available.  The XML files complying to this schema can originate from the following sources:           -->
+<!-- * produced from the granule ODL metadata by the ODL2XML translator                                     -->
+<!-- * provided by another DAAC via cross-daac ingest (retrieved from the XML archive)                      -->
+<!-- * retrieved from the small file archive where all XML files will reside starting with releas 7.21      -->
+<!-- IF DOCUMENTATION MUST BE ADDED TO THE SCHEMA, please use this comment format, rather than              -->
+<!--  the built in <annotation> and <documentation> elements.  If necessary, they can be used but with      -->
+<!--  because they might affect our CUSTOM VALIDATION performance.  The CUSTOM VALIDATION code              -->
+<!--  relies of <annotation> and <appinfo> tags so it must retrieve all annotations, regardless of their    -->
+<!-- purpose.                                                                                               -->
+<!--********************************************************************************************************-->
+<!-- SCHEMA VERSION 1.0 subsequent modifications MUST be described in comments below this line.             -->
+<!--********************************************************************************************************-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:include schemaLocation="EcsTypes.xsd"/>
+	<xs:element name="GranuleMetaDataFile">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="DTDVersion"/>
+				<xs:element ref="DataCenterId" minOccurs="0"/>
+				<!-- 7.21 change -->
+				<xs:element ref="GranuleURMetaData"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GranuleURMetaData">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="GranuleUR" minOccurs="0"/>
+				<xs:element ref="DbID" minOccurs="0"/>
+				<xs:element ref="InsertTime" minOccurs="0"/>
+				<xs:element ref="LastUpdate" minOccurs="0"/>
+				<xs:element ref="DeleteTime" minOccurs="0"/>
+				<xs:element ref="CollectionMetaData"/>
+				<xs:element ref="DataFiles" minOccurs="0"/>
+				<xs:element ref="ECSDataGranule" minOccurs="0"/>
+				<xs:element ref="PGEVersionClass" minOccurs="0"/>
+				<xs:choice minOccurs="0">
+					<xs:element ref="RangeDateTime"/>
+					<xs:element ref="SingleDateTime"/>
+				</xs:choice>
+				<xs:element ref="SpatialDomainContainer" minOccurs="0"/>
+				<xs:element ref="OrbitCalculatedSpatialDomain" minOccurs="0"/>
+				<xs:element ref="MeasuredParameter" minOccurs="0"/>
+				<xs:element ref="ProcessingQA" minOccurs="0"/>
+				<xs:element ref="StorageMediumClass" minOccurs="0"/>
+				<xs:element ref="Review" minOccurs="0"/>
+				<xs:element ref="Platform" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element ref="AnalysisSource" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element ref="Campaign" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element ref="PSAs" minOccurs="0"/>
+				<xs:element ref="InputGranule" minOccurs="0"/>
+				<xs:element ref="BrowseProduct" minOccurs="0"/>
+				<xs:element ref="PHProduct" minOccurs="0"/>
+				<xs:element ref="QAProduct" minOccurs="0"/>
+				<xs:element ref="AncillaryInputGranules" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

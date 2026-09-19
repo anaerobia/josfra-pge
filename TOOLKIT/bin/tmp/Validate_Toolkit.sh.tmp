@@ -1,0 +1,1558 @@
+#! /bin/sh
+#------------------------------------------------------------------------------
+# file:	
+# 	Validate_Toolkit.sh
+#
+# description:
+# 	This file is used to validate a correct installation for the SDP (PGS) 
+#       Toolkit under daac.
+#
+# usage:
+# 	To run this file, you have to change directory to:
+#       <daac-toolkit-dir>/bin and type Validate_Toolkit.sh 
+#       
+#       where 
+#       <daac-toolkit-dir> is the full path of the toolkit directory under daac.
+#       (for example: /usr/ecs/TS1/CUSTOM/TOOLKIT/toolkit)
+# author:
+#       Phuong T. Nguyen / Emergent Information Technologies, Inc.
+#
+# notes:
+#       1) This file automatically checks PGSHOME, PGSBIN, HDFHOME and 
+#          HDFEOS_HOME for necessary files of each flavor and figures out 
+#          which environment is valid or invalid.  An enviroment is 
+#          valid if it has been set correctly;  otherwise, it's invalid.
+#       2) This file is made for checking flavors only.  After run, it would 
+#          display outputs for all 32 flavors at once.  This file also outputs 
+#          necessary file names for each flavor.  In the case a necessary file 
+#          doesn't exist, it outputs invalid.
+#       3) This file is made for DAAC site only, if you try to run it under 
+#          other sites, maybe it doesn't work correctly.
+#
+# history:
+#       15-Nov-2000 PTN Initial version.
+#       19-Apr-2001 PTN NCR# ECSed30571:  Modified the script to be fine for 
+#                       linked directories.
+#------------------------------------------------------------------------------
+
+# The user should change directory to <daac-toolkit-dir>/bin to run the file
+# if not, it displays a message.
+cd ..
+if [ -d ./bin ] ; then
+cd bin
+    #if flavor directories exist, then go to check flavors; else display a message.
+    if [ -d sgi*_* ]; then
+    echo "------------------------------------------------------"
+    else
+    echo "Please run this script from <daac-toolkit-dir>/bin"
+    return 0
+    fi
+
+echo "An environment is valid if it has been set correctly; 
+otherwise, it's invalid.
+------------------------------------------------------"
+
+# From here, the file is coded to check and print outputs for all 32 flavors at once.
+# Because each group of flavors contains different files and the flavors should 
+# also be outputed in alphabetical order, so we have to split 32 flavors into 
+# smaller groups to do. However, the coding styles for different groups are very 
+# similar as following:
+
+for dir in sgi32_daac_cpp sgi32_daac_cpp_debug ; do 
+cd $dir
+
+# get different numbers before each flavor_name.
+if [ $dir = "sgi32_daac_cpp" ] ; then
+echo "1) " $dir
+else
+echo "2) " $dir
+fi
+
+# set pgsbin directory equal pwd (current directory)
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh.cpp ] ; then
+# get $1 $2 $3 which are PGSHOME, HDFHOME and HDFEOS_HOME of pgs-dev-env.csh.cpp
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh.cpp`
+
+    # if there exists a directory matched $1 which is PGSHOME
+    if [ -d $1 ] ; then
+
+	# if there exists a directory matched $1/bin/$dir which is PGSBIN of pgs-dev-env.csh.cpp
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	# after cd to $1/bin/$dir, set pgsbindir1 equal pwd and compare contents_of_pgsbindir and
+	# contents_of_pgsbindir1 (if we just compare pgsbindir and pgsbindir1, we may have problems
+	# with the link of directories)
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh.cpp    PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    # if there exists a directory matched $2 which is HDFHOME, then cd to $2;
+    # else echo HDFHOME invalid
+    if [ -d $2 ] ; then
+    cd $2
+	# if these directories exist, then change dir; else echo HDFHOME invalid
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+
+	# because there're several different directories for HDFHOME which contain the
+	# same subdirectories, so we have to change dir to where they can't be the same.
+	cd ../../../..
+	    # if this dir exists, echo HDFHOME valid; else echo it invalid
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    # if there exists a directory matched $3 which is HDFEOS_HOME, then cd to $3;
+    # else echo HDFEOS_HOME invalid
+    if [ -d $3 ] ; then
+    cd $3 
+	# if these directories exist, then change dir; else echo HDFEOS_HOME invalid
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+
+	# because there're some different directories for HDFEOS_HOME which contain the 
+	# same subdirectories, so we have to change dir to where they can't be the same.
+	cd ../../..
+	    # if this dir exists, echo HDFEOS_HOME valid; else echo it invalid
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+# change directory back to pgsbindir
+cd $pgsbindir
+
+else
+echo "        pgs-dev-env.csh.cpp doesn't exist        invalid"
+fi
+
+if [ -f pgs-env.csh.cpp ] ; then
+# get $1 which is PGSHOME of pgs-env.csh.cpp
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh.cpp`
+
+    # if there exists a directory matched $1 which is PGSHOME
+    if [ -d $1 ] ; then
+
+	# if there exists a directory matched $1/bin/$dir which is PGSBIN of pgs-env.csh.cpp
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	# after cd to $1/bin/$dir, set pgsbindir1 equal pwd and compare contents_of_pgsbindir and
+	# contents_of_pgsbindir1 (if we just compare pgsbindir and pgsbindir1, we may have problems
+	# with the link of directories)
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh.cpp        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	# change directory back to pgsbindir
+	cd $pgsbindir
+    else
+    echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh.cpp doesn't exist            invalid"
+fi
+      
+cd ..
+done
+
+for dir in sgi32_daac_f77 sgi32_daac_f77_debug sgi32_daac_f90 sgi32_daac_f90_debug ; do 
+cd $dir
+if [ $dir = "sgi32_daac_f77" ] ; then
+echo "3) " $dir 
+else if [ $dir = "sgi32_daac_f77_debug" ] ; then
+echo "4) " $dir
+else if [ $dir = "sgi32_daac_f90" ]; then
+echo "5) " $dir
+else 
+echo "6) " $dir
+fi
+fi
+fi
+
+# set pgsbindir equal pwd (current directory)
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh ] ; then
+# get $1 $2 $3 which are PGSHOME, HDFHOME and HDFEOS_HOME of pgs-dev-env.csh
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh`
+
+    # if there exists a directory matched $1 which is PGSHOME
+    if [ -d $1 ] ; then
+	# if there exists a directory matched $1/bin/$dir which is PGSBIN of pgs-dev-env.csh
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	# after cd to $1/bin/$dir, set pgsbindir1 equal pwd and compare contents_of_pgsbindir and
+	# contents_of_pgsbindir1 (if we just compare pgsbindir and pgsbindir1, we may have problems
+	# with the link of directories)
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    # if there exists a directory matched $2 which is HDFHOME, then cd to $2;
+    # else echo HDFHOME invalid
+    if [ -d $2 ] ; then
+    cd $2
+	# if these directories exist, then change dir; else echo HDFHOME invalid
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+
+	# because there're several different directories for HDFHOME which contain the 
+	# same subdirectories, so we have to change dir to where they can't be the same.
+	cd ../../../..
+	    # if this dir exists, echo HDFHOME valid; else echo it invalid
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    # if there exists a directory matched $3 which is HDFEOS_HOME, then cd to $3;
+    # else echo HDFEOS_HOME invalid
+    if [ -d $3 ] ; then
+    cd $3 
+	# if these directories exist, then change dir; else echo HDFEOS_HOME invalid
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+
+	# because there're several different directories for HDFEOS_HOME which contain the
+	# same subdirectories, so we have to change dir to where they can't be the same.
+	cd ../../..
+	    # if this dir exists, echo HDFEOS_HOME valid; else echo it invalid
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+# change directory back to pgsbindir
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh doesn't exist            invalid"
+fi
+
+if [ -f pgs-env.csh ] ; then
+# get $1 which is PGSHOME of pgs-env.csh
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh`
+
+    # if there exists a directory matched $1 which is PGSHOME
+    if [ -d $1 ] ; then
+	# if there exists a directory matched $1/bin/$dir which is PGSBIN of pgs-env.csh
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	# after cd to $1/bin/$dir, set pgsbindir1 equal pwd and compare contents_of_pgsbindir and
+	# contents_of_pgsbindir1 (if we just compare pgsbindir and pgsbindir1, we may have problems
+	# with the link of directories)
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh            PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	# change directory back to pgsbindir
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+fi
+else
+echo "        pgs-env.csh doesn't exist                invalid"
+fi
+
+cd ..
+done
+
+for dir in sgi32_daac_r sgi32_daac_r_debug ; do
+cd $dir
+if [ $dir = "sgi32_daac_r" ] ; then
+echo "7) " $dir
+else
+echo "8) " $dir
+fi
+
+# set pgsbindir equal pwd (current directory)
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh.tsf ] ; then
+# get $1 $2 $3 which are PGSHOME, HDFHOME and HDFEOS_HOME of pgs-dev-env.csh.tsf
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh.tsf`
+
+    # if there exists a directory matched $1 which is PGSHOME
+    if [ -d $1 ] ; then
+	# if there exists a directory matched $1/bin/$dir which is PGSBIN of pgs-dev-env.csh.tsf
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	# after cd to $1/bin/$dir, set pgsbindir1 equal pwd and compare contents_of_pgsbindir and
+	# contents_of_pgsbindir1 (if we just compare pgsbindir and pgsbindir1, we may have problems
+	# with the link of directories)
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh.tsf    PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    # if there exists a directory matched $2 which is HDFHOME, then cd to $2;
+    # else echo HDFHOME invalid
+    if [ -d $2 ] ; then
+    cd $2
+	# if these directories exist, then change dir; else echo HDFHOME invalid
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+
+	# because there're several different directories for HDFHOME which contain the 
+	# same subdirectories, so we have to change dir to where they can't be the same.
+	cd ../../../..
+	    # if this dir exists, echo HDFHOME valid; else echo it invalid
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    # if there exists a directory matched $3 which is HDFEOS_HOME, then cd to $3;
+    # else echo HDFEOS_HOME invalid
+    if [ -d $3 ] ; then
+    cd $3 
+	# if these directories exist, then change dir; else echo HDFEOS_HOME invalid
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+
+	# because there're several different directories for HDFEOS_HOME which contain the 
+	# same subdirectories, so we have to change dir to where they can't be the same.
+	cd ../../..
+	    # if this dir exists, echo HDFEOS_HOME valid; else echo it invalid
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+# change directory back to pgsbindir
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh.tsf doesn't exist        invalid"
+fi
+
+if [ -f pgs-env.csh.tsf ] ; then
+# get $1 which is PGSHOME of pgs-env.csh.tsf
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh.tsf`
+
+    # if there exists a directory matched $1 which is PGSHOME
+    if [ -d $1 ] ; then
+	# if there exists a directory matched $1/bin/$dir which is PGSBIN of pgs-env.csh.tsf
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	# after cd to $1/bin/$dir, set pgsbindir1 equal pwd and compare contents_of_pgsbindir and
+	# contents_of_pgsbindir1 (if we just compare pgsbindir and pgsbindir1, we may have problems
+	# with the link of directories)
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh.tsf        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	# change directory back to pgsbindir
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh.tsf doesn't exist            invalid"
+fi
+
+cd ..
+done
+
+for dir in sgi32_scf_cpp sgi32_scf_cpp_debug ; do
+cd $dir
+if [ $dir = "sgi32_scf_cpp" ] ; then
+echo "9) " $dir
+else
+echo "10)" $dir
+fi
+
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh.cpp ] ; then
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh.cpp`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh.cpp    PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    if [ -d $2 ] ; then
+    cd $2
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+	cd ../../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    if [ -d $3 ] ; then
+    cd $3 
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+	cd ../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh.cpp doesn't exist            invalid"
+fi
+
+if [ -f pgs-env.csh.cpp ] ; then
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh.cpp`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh.cpp        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh.cpp doesn't exist            invalid"
+fi
+
+cd ..
+done
+
+for dir in sgi32_scf_f77 sgi32_scf_f77_debug sgi32_scf_f90 sgi32_scf_f90_debug ; do
+cd $dir
+if [ $dir = "sgi32_scf_f77" ] ; then
+echo "11)" $dir 
+else if [ $dir = "sgi32_scf_f77_debug" ] ; then
+echo "12)" $dir
+else if [ $dir = "sgi32_scf_f90" ]; then
+echo "13)" $dir
+else 
+echo "14)" $dir
+fi
+fi
+fi
+
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh ] ; then
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    if [ -d $2 ] ; then
+    cd $2
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+	cd ../../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    if [ -d $3 ] ; then
+    cd $3 
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+	cd ../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh doesn't exist            invalid"
+fi
+
+if [ -f pgs-env.csh ] ; then
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh            PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh doesn't exist                invalid"
+fi
+
+cd ..
+done
+
+for dir in sgi32_scf_r sgi32_scf_r_debug ; do
+cd $dir
+if [ $dir = "sgi32_scf_r" ] ; then
+echo "15)" $dir
+else
+echo "16)" $dir
+fi
+
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh.tsf ] ; then
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh.tsf`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh.tsf    PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    if [ -d $2 ] ; then
+    cd $2
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+	cd ../../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    if [ -d $3 ] ; then
+    cd $3 
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+	cd ../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh.tsf doesn't exist        invalid"
+fi
+
+if [ -f pgs-env.csh.tsf ] ; then
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh.tsf`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh.tsf        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh.tsf doesn't exist            invalid"
+fi
+
+cd ..
+done
+
+for dir in sgi64_daac_cpp sgi64_daac_cpp_debug ; do 
+cd $dir
+if [ $dir = "sgi64_daac_cpp" ] ; then
+echo "17)" $dir
+else
+echo "18)" $dir
+fi
+
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh.cpp ] ; then
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh.cpp`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh.cpp    PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    if [ -d $2 ] ; then
+    cd $2
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+	cd ../../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    if [ -d $3 ] ; then
+    cd $3 
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+	cd ../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh.cpp doesn't exist            invalid"
+fi
+
+if [ -f pgs-env.csh.cpp ] ; then
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh.cpp`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh.cpp        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh.cpp doesn't exist            invalid"
+fi
+
+cd ..
+done
+
+for dir in sgi64_daac_f77 sgi64_daac_f77_debug sgi64_daac_f90 sgi64_daac_f90_debug ; do
+cd $dir
+if [ $dir = "sgi64_daac_f77" ] ; then
+echo "19)" $dir 
+else if [ $dir = "sgi64_daac_f77_debug" ] ; then
+echo "20)" $dir
+else if [ $dir = "sgi64_daac_f90" ]; then
+echo "21)" $dir
+else 
+echo "22)" $dir
+fi
+fi
+fi
+
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh ] ; then
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    if [ -d $2 ] ; then
+    cd $2
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+	cd ../../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    if [ -d $3 ] ; then
+    cd $3 
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+	cd ../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh doesn't exist            invalid"
+fi
+
+if [ -f pgs-env.csh ] ; then
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh            PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh doesn't exist                invalid"
+fi
+
+cd ..
+done
+
+for dir in sgi64_daac_r sgi64_daac_r_debug ; do
+cd $dir
+if [ $dir = "sgi64_daac_r" ] ; then
+echo "23)" $dir
+else
+echo "24)" $dir
+fi
+
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh.tsf ] ; then
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh.tsf`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh.tsf    PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    if [ -d $2 ] ; then
+    cd $2
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+	cd ../../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    if [ -d $3 ] ; then
+    cd $3 
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+	cd ../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh.tsf doesn't exist        invalid"
+fi
+
+if [ -f pgs-env.csh.tsf ] ; then
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh.tsf`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh.tsf        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh.tsf doesn't exist            invalid"
+fi
+
+cd ..
+done
+
+for dir in sgi64_scf_cpp sgi64_scf_cpp_debug ; do
+cd $dir
+if [ $dir = "sgi64_scf_cpp" ] ; then
+echo "25)" $dir
+else
+echo "26)" $dir
+fi
+
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh.cpp ] ; then
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh.cpp`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh.cpp    PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh.cpp    PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    if [ -d $2 ] ; then
+    cd $2
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+	cd ../../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    if [ -d $3 ] ; then
+    cd $3 
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+	cd ../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh.cpp doesn't exist            invalid"
+fi
+
+if [ -f pgs-env.csh.cpp ] ; then
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh.cpp`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh.cpp        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh.cpp        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh.cpp doesn't exist            invalid"
+fi
+
+cd ..
+done
+
+for dir in sgi64_scf_f77 sgi64_scf_f77_debug sgi64_scf_f90 sgi64_scf_f90_debug ; do
+cd $dir
+if [ $dir = "sgi64_scf_f77" ] ; then
+echo "27)" $dir 
+else if [ $dir = "sgi64_scf_f77_debug" ] ; then
+echo "28)" $dir
+else if [ $dir = "sgi64_scf_f90" ]; then
+echo "29)" $dir
+else 
+echo "30)" $dir
+fi
+fi
+fi
+
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh ] ; then
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    if [ -d $2 ] ; then
+    cd $2
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+	cd ../../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    if [ -d $3 ] ; then
+    cd $3 
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+	cd ../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh doesn't exist            invalid"
+fi
+
+if [ -f pgs-env.csh ] ; then
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh            PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh            PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh doesn't exist                invalid"
+fi
+
+cd ..
+done
+
+for dir in sgi64_scf_r sgi64_scf_r_debug ; do
+cd $dir
+if [ $dir = "sgi64_scf_r" ] ; then
+echo "31)" $dir
+else
+echo "32)" $dir
+fi
+
+pgsbindir=`pwd`
+
+if [ -f pgs-dev-env.csh.tsf ] ; then
+set -- `awk 'NR == 1 , NR == 3 {print $3}' pgs-dev-env.csh.tsf`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-dev-env.csh.tsf    PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+    else
+    echo "        pgs-dev-env.csh.tsf    PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+
+    if [ -d $2 ] ; then
+    cd $2
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d man ] ; then
+	cd ../../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFHOME           valid"
+	    else
+	    echo "                               HDFHOME           invalid"
+	    fi
+	else
+	echo "                               HDFHOME           invalid"
+	fi
+    else
+    echo "                               HDFHOME           invalid"
+    fi
+
+    if [ -d $3 ] ; then
+    cd $3 
+	if [ -d bin ] && [ -d lib ] && [ -d include ] && [ -d src ] ; then
+	cd ../../..
+	    if [ -d CUSTOM ] ; then
+	    echo "                               HDFEOS_HOME       valid"
+	    else
+	    echo "                               HDFEOS_HOME       invalid"
+	    fi
+	else
+	echo "                               HDFEOS_HOME       invalid"
+	fi
+    else 
+    echo "                               HDFEOS_HOME       invalid"
+    fi
+
+cd $pgsbindir
+else
+echo "        pgs-dev-env.csh.tsf doesn't exist        invalid"
+fi
+
+if [ -f pgs-env.csh.tsf ] ; then
+set -- `awk 'NR == 1 {print $3}' pgs-env.csh.tsf`
+
+    if [ -d $1 ] ; then
+	if [ -d $1/bin/$dir ] ; then
+	RETVAL= cd $1/bin/$dir
+	RETVAL=`expr $?`
+
+	pgsbindir1=`pwd`
+	contents_of_pgsbindir=`ls -al $pgsbindir`
+	contents_of_pgsbindir1=`ls -al $pgsbindir1`
+
+	    if [ "$contents_of_pgsbindir" = "$contents_of_pgsbindir1" ] ; then
+	    echo "        pgs-env.csh.tsf        PGSHOME           valid
+                               PGSBIN            valid"
+	    else
+	    echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+	    fi
+
+	else
+	export RETVAL=1
+	echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+	fi
+	cd $pgsbindir
+
+    else
+    echo "        pgs-env.csh.tsf        PGSHOME           invalid
+                               PGSBIN            invalid"
+    fi
+else
+echo "        pgs-env.csh.tsf doesn't exist            invalid"
+fi
+
+cd ..
+done
+
+#else (from the statement: if [ -d ./bin ] ; then)
+else
+echo "Please run this script from <daac-toolkit-dir>/bin"
+fi

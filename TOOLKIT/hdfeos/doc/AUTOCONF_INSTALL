@@ -1,0 +1,333 @@
+Installing HDF-EOS2 using Autoconf/Automake
+
+For hdfeos supported platforms linux64, linux32, Mac, and Cywin, and sun11 the easy and consistent
+ method of hdf-eos installation is the use of INSTALL in /hdfeos/bin directory where also installs 
+jpeg, zlib, szip, hdf, used in hdf-eos. For other unsupported platform one may need to use autoconfig
+installation as directed bellow.
+
+0) Prerequisite
+
+HDF-EOS2 library depends on HDF4 library. There are three different 
+configuration options to build HDF4 with SZIP. The user should know how 
+HDF4 was built before building HDF-EOS library. For more information, 
+refer to section 4.
+
+You may need one of the following flags if you are using the corresponding platform:
+
+flag			platform
+--------               ---------
+DEC_ALPHA		dec alpha	
+IRIX			sgi
+SGI64			64-bit sgi compilation
+UNICOS			cray
+LINUX64			linux 64-bit compilation
+IA64			linux (in PC with itanium chip)
+MACINTOSH		power mac
+MACINTEL		intel mac (32 and 64-bit compilation)
+IBM6000			ibm
+CYGWIN			cygwin
+
+So for example for 64-bit linux compilation in debug mode you will need to set:
+
+    $ setenv CFLAGS "-g -DLINUX64"
+
+1) Quick Start
+
+To build HDF-EOS from /example/path/hdfeos and install the HDF-EOS library
+into /example/path/hdfeos/lib/linux :
+    $ cd /example/path/hdfeos
+    $ ./configure CC=/path/to/hdf4/bin/h4cc
+    $ make
+    $ make install
+
+If you built HDF4 with SZIP, the user should type the following:
+    $ cd /example/path/hdfeos
+    $ ./configure CC=/path/to/hdf4/bin/h4cc --with-szlib=/path/to/szlib
+    $ make
+    $ make install
+
+You may want to execute test drivers to check if HDF-EOS is correctly built:
+    $ make check
+
+If you want to execute Fortran test drivers, refer to section 5.
+
+
+2) Configuration
+
+HDF-EOS uses the GNU autoconf system for configuration, which detects various
+features of the host system and creates the Makefiles.
+
+The configuration process can be controlled through environment variables
+and command-line switches.  For a complete list of switches type:
+
+    $ ./configure --help
+
+Configure must be re-run for each platform, and the source tree can only be
+configured for one platform at a time.
+
+
+3) Building against HDF4
+
+The user must specify the path to h4cc script. This can be done by
+setting the environment variable CC to be the h4cc script installed with HDF4:
+
+    $ CC=/path/to/hdf4/bin/h4cc
+or
+    $ setenv CC /path/to/hdf4/bin/h4cc
+
+
+4) Specifying SZIP
+
+HDF4 can be built with following three options:
+  - without SZIP
+  - with SZIP decoder only
+  - with SZIP encoder and decoder
+
+If HDF4 is built without SZIP, this section can be ignored. If HDF4 is built
+with SZIP, the user should give configure the path to SZIP:
+
+    $ ./configure --with-szlib=/path/to/szlib
+
+The SZIP that HDF4 was built with should be consistent with that the user
+specifies. For example, users should specify the path of SZIP library that
+includes both encoder and decoder if the HDF4 was built with SZIP including
+encoder and decoder. If they are not consistent, configure script will fail.
+
+We assume that SZIP is statically linked with HDF4; configure
+script may fail if SZIP is dynamically linked with HDF4.
+
+
+5) Specifying Fortran option
+
+Regardless of the Fortran setting of HDF4 library, HDF-EOS library can be
+configured to build Fortran wrapper. This can be done by passing -Df2cFortran
+to the compiler.
+
+    $ CC="/path/to/hdf4/bin/h4cc -Df2cFortran"
+or 
+    $ setenv CC "/path/to/hdf4/bin/h4cc -Df2cFortran"
+
+When the f2cFortran macro is defined, several Fortran programs will be built
+and executed during "make check". For this case, the user should provide the
+path to HDF4 so that Fortran compiler can find HDF4 library:
+
+    $ ./configure --with-hdf4=/path/to/hdf4
+
+To build Fortran testdrivers, the user may need to specify Fortran compiler.
+
+    $ FC="/path/to/fortran_compiler"
+or 
+    $ setenv FC "/path/to/fortran_compiler"
+
+Some platforms may require flags for the Fortran compiler. The user can
+specify Fortran options by assigning FC environment variable. For example,
+IRIX system may require the following option:
+
+    $ FCFLAGS=-64
+or 
+    $ setenv FCFLAGS -64
+
+For more information, refer to section 11.
+
+For any Fortran compilers, all .f files under samples/ directory and
+grid/testgrid_f77.f, point/testpoint_f77.f and swath/testswath_f77.f under
+testdrivers/ directory will be built and executed.  If the specified Fortran
+compiler is Fortran 90 (or later) and the operating system is 32bit, three
+additional testdrivers will be built and executed: grid/testgrid_f90,
+point/testpoint_f90 and swath/testswath_f90.
+
+If HDF-EOS is built with SZIP encoder and decoder, testgrid77 will test if SZIP
+encoding works.
+
+
+6) Specifying install locations
+
+The location where the HDF-EOS library will be installed is controlled by
+the --libdir switch.  To set the install location to
+/example/path/hdfeos/lib/linux :
+
+    $ ./configure --libdir=/example/path/hdfeos/lib/linux
+
+By default HDF-EOS installs libraries into the hdfeos/lib/* directories
+and does not install header files.  Users who wish to install both libraries
+and header files should use the --enable-install-include switch to enable
+this feature and the --prefix switch to control where they are installed.
+To install into /usr/local/hdfeos/include and /usr/local/hdfeos/lib :
+
+    $ ./configure --enable-install-include --prefix=/usr/local/hdfeos
+
+Without specifying the prefix flag,  a new directory 'hdfeos' will be
+created under the current directory where ./configure is run.  The
+HDF-EOS library and the header files are installed under this directory.
+
+
+7) Building and Installing
+
+Once HDF-EOS has been configured, its makefiles can be used to build, test,
+and install.  To build the library:
+
+    $ make
+
+To run tests (if present):
+
+    $ make check
+
+To install to the location specified during configure:
+
+    $ make install
+
+These commands do not need to be run in order; if the library has not been
+built, 'make install' will build it before installing.  However, configure
+must always have been run on the current system before running make.
+
+
+8) The Testdrivers Directory
+
+The testdrivers directory contains test to verify that HDF-EOS has built
+correctly.  Users who wish to run these tests should copy the testdrivers
+directory into the HDF-EOS directory before running configure.  Configure
+will detect the presence of this directory and 'make check' will run all
+the tests it contains.
+
+If you want verbose messages, you can apply -v option.
+   $ grid/testgrid -v -h
+
+The same option can be applied to swath/testswath and point/testpoint.
+
+
+9) For More Information
+
+For more information about using autoconf and automake, see the
+documentation online at
+http://sources.redhat.com/autobook/autobook/autobook.html
+or HDF4's documentation.
+
+
+10) Examples:
+
+1.  In 64-bit Linux  machine for 32-bit installation:
+
+>setenv CC /User_Home/TOOLKIT/hdf/linux32/hdf4.2.13/bin/h4cc
+>./configure --libdir=/User_Home/hdfeos2_autoconfig/hdfeos/lib/linux32 --enable-install-include --prefix=/User_Home/hdfeos2_autoconfig/hdfeos
+>make
+>make check
+>make install
+
+OR
+
+>setenv CC "/User_Home/TOOLKIT/hdf/linux32/hdf-4.2.13/bin/h4cc -Df2cFortran"
+>setenv FC /usr/bin/g77
+>setenv CFLAGS -m32
+>setenv FCFLAGS -m32
+>setenv LDFLAGS -m32
+>./configure --libdir=/User_Home/hdfeos2_autoconfig/hdfeos/lib/linux32 --enable-install-include --prefix=/User_Home/hdfeos2_autoconfig/hdfeos --with-hdf4=/User_Home/TOOLKIT/hdf/linux32/hdf-4.2.13 --with-zlib=/User_Home/TOOLKIT/zlib/linux32/zlib-1.2.11 --with-szlib=/User_Home/TOOLKIT/szip/linux32/szip-2.1.1 --with-jpeg=/User_Home/TOOLKIT/jpeg/linux32/jpeg-9b
+>make
+>make check
+>make install
+
+2.  In 64-bit Linux machine for 64-bit installation:
+
+>setenv CC "/User_Home/TOOLKIT/hdf/linux64/hdf-4.2.13/bin/h4cc -DLINUX64"
+>./configure --libdir=/User_Home/hdfeos2_autoconfig/hdfeos/lib/linux64 --enable-install-include --prefix=/User_Home/hdfeos2_autoconfig/hdfeos
+>make
+>make check
+>make install
+
+3.  In 64-bit Mac Intel machine for 64-bit installation:
+
+>setenv CC "/User_Home/TOOLKIT/hdf/macintel64/hdf-4.2.13/bin/h4cc -DMACINTEL"
+>./configure --libdir=/User_Home/hdfeos2_autoconfig/hdfeos/lib/macintel64 --enable-install-include --prefix=/User_Home/hdfeos2_autoconfig/hdfeos
+>make
+>make check
+>make install
+
+
+4.  In 32-bit Linux  machine for 32-bit installation (with SZIP):
+
+>setenv CC /User_Home/TOOLKIT/hdf/linux32/hdf-4.2.13/bin/h4cc
+>./configure --libdir=/User_Home/hdfeos2_autoconfig/hdfeos/lib/linux32 --with-szlib=/User_Home/TOOLKIT/szlib --enable-install-include --prefix=/User_Home/hdfeos2_autoconfig/hdfeos
+>make
+>make check
+>make install
+
+5.  In 32-bit Mac Intel machine for 32-bit installation (with SZIP):
+
+>setenv CC /User_Home/TOOLKIT/hdf/macintel32/hdf-4.2.13/bin/h4cc
+>./configure --libdir=/User_Home/hdfeos2_autoconfig/hdfeos/lib/macintel32 --with-szlib=/User_Home/TOOLKIT/szlib --enable-install-include --prefix=/User_Home/hdfeos2_autoconfig/hdfeos
+>make
+>make check
+>make install
+
+6.  In 32-bit Linux machine for 32-bit installation (with Fortran wrapper):
+
+>setenv CC "/User_Home/TOOLKIT/hdf/linux32/hdf-4.2.13/bin/h4cc -Df2cFortran"
+>setenv FC /usr/bin/f77
+>./configure --libdir=/User_Home/hdfeos2_autoconfig/hdfeos/lib/linux32 --enable-install-include --prefix=/User_Home/hdfeos2_autoconfig/hdfeos --with-hdf4=/User_Home/TOOLKIT/hdf/linux32/hdf-4.2.13
+>make
+>make check
+>make install
+
+7.  In 32-bit Mac Intel machine for 32-bit installation (with Fortran wrapper):
+
+>setenv CC "/User_Home/TOOLKIT/hdf/macintel32/hdf-4.2.13/bin/h4cc -Df2cFortran"
+>setenv FC /usr/bin/f77
+>./configure --libdir=/User_Home/hdfeos2_autoconfig/hdfeos/lib/macintel32 --enable-install-include --prefix=/User_Home/hdfeos2_autoconfig/hdfeos --with-hdf4=/User_Home/TOOLKIT/hdf/macintel32/hdf-4.2.13
+>make
+>make check
+>make install
+
+8.  In 64-bit IRIX machine for 64-bit installation (with Fortran wrapper):
+
+>setenv CC "/opt/MIPSpro/bin/cc -Df2cFortran -DSGI64 -DIRIX"
+>setenv FC "/opt/MIPSpro/bin/f77 -DSGI64"
+>setenv CFLAGS -64
+>setenv FCFLAGS -64
+>setenv LDFLAGS -64
+>./configure --libdir=/User_Home/hdfeos2_autoconfig/hdfeos/lib/irix64 --enable-install-include --prefix=/User_Home/hdfeos2_autoconfig/hdfeos --with-hdf4=/User_Home/TOOLKIT/hdf/irix64/hdf-4.2.13
+>make
+>make check
+>make install
+
+
+11) Fortran compiler options
+This section explains what FCFLAGS is expected when you get errors.
+
+1. -fno-second-underscore option
+Linkers may complain undefined references; e.g.
+
+   undefined reference to `swrdfld__`
+
+Mostly, this error is caused by different name mangling methods.  In the
+HDF-EOS library, Fortran API functions have one underscore; e.g. 'swrdfld_'.
+However, some Fortran compilers assumes external functions have two
+underscores like 'swrdfld__', which doesn't exist in the library.
+
+Other Fortran compilers may have different name mangling methods, and the user
+may need to read their documents to match the name mangling method.
+
+If you need this compiler option you may set it during setting FC such as:
+
+$ setenv FC "/usr/bin g77 -fno-second-underscore"
+
+2. Linking errors
+You may get some linking errors while Fortran testdrivers are built. Some
+systems may require additional libraries. Generally, h4cc can detect these
+additional libraries and pass them to the linker. That's the reason why you
+may not encounter linking errors while building the HDF-EOS library.
+
+To build Fortran testdrivers, however, pure Fortran compilers are used, which
+means there is no helper that can do what h4cc does. So, if you get some
+linking errors, you need to set additional libraries before executing
+configure script:
+
+    $ LIBS=<additional libraries>
+or 
+    $ setenv LIBS <additional libraries>
+
+We got a problem under Solaris, and we had to set LIBS environment variable as
+the following:
+
+    $ LIBS=-lnsl
+or 
+    $ setenv LIBS -lnsl
+

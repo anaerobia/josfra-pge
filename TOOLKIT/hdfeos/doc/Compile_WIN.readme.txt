@@ -1,0 +1,140 @@
+ 
+COMPILING A PROGRAM:
+-------------------
+                  
+Following are instructions for compiling an application program on the 
+window xp using the hdfeos binaries that we provide or you build.
+
+Make sure that you already have all of the following libraries before you start
+to compile an application program:  libjpeg.lib, zdll.lib, szlib.lib, 
+hd4213.lib, hm4213.lib, hdfeos.lib, gctp.lib.
+
+NOTE: The current versions that we're using: jpeg6b, zlib1.2.11, szip2.1.1, 
+      HDF4.2.13, HDFEOS2.20.
+      If you want to use the latest versions of jpeg, zlib and szlib, 
+      go to The HDF Group website 
+      (http://www.hdfgroup.org/release4/obtain.html and
+      http://www.hdfgroup.org/HDF5/release/obtain5.html) to download.
+
+C or Fortran program :
+----------------------
+
+Using Microsoft "Visual C++ version 9.x (orlater)" for C program
+Using Digitalt Visual Fortran version 9.x or later version for fortran program
+
+
+==================== Using Microsoft Visual Studio 2013 =======================
+
+Example: runing the hdfeos testdrivers:
+
+Open Microsoft Visual Studio 2013 and create a project 
+(Visual C++ Project->Win32 Console Project). place a "testdriver" (for example 
+/hdfeos/testdrivers/swath/testswath.c) in the "Source Files" directory (in the 
+Solution Explorer Window) and the tutils.h in the "Haeder Files" directory of 
+the project. Choose "Release" or "Debug" for the configuration setting (using 
+Build->"Configuration Manager" or the one showing on the toolbar).
+
+
+Click on project name in the project tree.
+Select Project->Properties:
+
+	Select "General" under "Configuration Properties". 
+		In the selection window for "Configuration Type" select 
+		"Application(.exe)" option to create output as executable.
+
+	Select folder C/C++->Preprocesssor
+		Add the following to "Preprocessor definitions":   
+		VISUAL_CPLUSPLUS, INTEL86
+
+		If the followings were not already there, then add them:   
+		WIN32,_CONSOLE
+
+		For "Runtime Library" use "Multi-thread(/MT)"
+
+		For "precompiled Headers" choose 
+		"Create Precompiled Headers(/yc)"
+
+		For "Advanced"->"Compile As" choose "Compile as C Code (/TC)"
+
+
+	Select "Linker" folder.
+
+		Under "General" chose "output File" and specify the exectable 
+		and full path to it as "F:\MyHdfeos_bin\testswath.exe".
+
+		Under "Input" put the followings for the 
+		"Additional Dependencies":
+
+
+   		Swath & Point:
+   		==============
+      		wsock32.lib hdfeos.lib hd4213.lib hm4213.lib libjpeg.lib 
+		zdll.lib szlib.lib xdr.lib
+
+   		Grid
+   		====
+      		wsock32.lib hdfeos.lib gctp.lib hd4213.lib hm4213.lib 
+		libjpeg.lib zdll.lib szlib.lib xdr.lib
+
+   		The following libraries may (or may not) need to be included: 
+       		kernel32.lib user32.lib gdi32.lib winspool.lib comdig32.lib
+       		advapi32lib shell32.lib ole32.lib oleaut32.lib uuid.lib
+       		odbc32.lib odbccp32.lib
+
+   		NOTE: hdfeos.lib and gctp.lib are Release Versions.
+      		hdfeosd.lib and gctpd.lib are Debug versions.
+
+
+		Under "Advanced" type "main" for the "Entry Point"
+	This completes settings for "Linker". Click "Apply' then "OK" to close 
+	Property setting window.
+
+
+Select Tools->Options->Projects and Solutions->VC++ Directories->
+       "Show directories for"->"Include files", add the following directories:
+
+	$(VCInstallDir)include
+	$(VCInstallDir)atlmfc\include
+	$(WindowsSdkDir)\include
+	$(FrameworkSDKDir)include
+	F:<path to jpeg>\include  
+	F:<path to zlib>\include
+	F:<path to szlib>\include      
+        F:<path to HDF>\include 
+        F:<path to HDFEOS>\include 
+	
+
+Select Tools->Options->Projects and Solutions ->VC++Directories->
+       "Show directories for"->"Library files", add the following directories:
+
+	F:\Program Files\Microsoft Visual Studio 9.0\VC\redist\x86\Microsoft.VC90.CRT
+        $(VCInstallDir)lib
+	$(VCInstallDir)atlmfc\lib
+	$(VCInstallDir)atlmfc\lib\i386
+	$(WindowsSdkDir)\lib
+	$(FrameworkSDKDir)lib
+	$(VSInstallDir)
+	$(VSInstallDir)lib
+	F:<path to jpeg>\lib 
+	F:<path to zlib>\lib
+	F:<path to szlib>\lib
+	F:<path to HDF>\lib
+	F:<path to HDFEOS>\lib
+
+
+Click "OK" to close "Options" window.
+
+Select Build and then "Build <project name>".
+
+To run the executable file, for example, testswath.exe
+
+Open MS-Dos, go to ../testdrivers/swath and run testswath.exe. 
+
+NOTE: Before running testpoint.exe, you should copy all ".txt" files to release
+      folder.
+
+
+
+
+
+

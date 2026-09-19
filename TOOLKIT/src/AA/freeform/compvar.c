@@ -1,0 +1,1 @@
+#error ff_compare_variables() has moved into dvevents.c

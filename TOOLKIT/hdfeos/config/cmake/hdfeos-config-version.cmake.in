@@ -1,0 +1,27 @@
+#-----------------------------------------------------------------------------
+# hdfeos Version file for install directory
+#-----------------------------------------------------------------------------
+
+SET (PACKAGE_VERSION @HDFEOS_VERSION_STRING@)
+
+IF ("${PACKAGE_FIND_VERSION_MAJOR}" EQUAL @HDFEOS_VERS_MAJOR@)
+
+  # exact match for version @HDFEOS_VERS_MAJOR@.@HDFEOS_VERS_MINOR@
+  IF ("${PACKAGE_FIND_VERSION_MINOR}" EQUAL @HDFEOS_VERS_MINOR@)
+
+    # compatible with any version @HDFEOS_VERS_MAJOR@.@HDFEOS_VERS_MINOR@.x
+    SET (PACKAGE_VERSION_COMPATIBLE 1) 
+    
+    IF ("${PACKAGE_FIND_VERSION_PATCH}" EQUAL @HDFEOS_VERS_RELEASE@)
+      SET (PACKAGE_VERSION_EXACT 1)    
+
+      IF ("${PACKAGE_FIND_VERSION_TWEAK}" EQUAL @HDFEOS_VERS_SUBRELEASE@)
+        # not using this yet
+      ENDIF ("${PACKAGE_FIND_VERSION_TWEAK}" EQUAL @HDFEOS_VERS_SUBRELEASE@)
+      
+    ENDIF ("${PACKAGE_FIND_VERSION_PATCH}" EQUAL @HDFEOS_VERS_RELEASE@)
+    
+  ENDIF ("${PACKAGE_FIND_VERSION_MINOR}" EQUAL @HDFEOS_VERS_MINOR@)
+ENDIF ("${PACKAGE_FIND_VERSION_MAJOR}" EQUAL @HDFEOS_VERS_MAJOR@)
+
+

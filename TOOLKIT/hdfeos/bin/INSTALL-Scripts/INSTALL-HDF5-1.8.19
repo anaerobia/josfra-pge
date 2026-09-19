@@ -1,0 +1,1183 @@
+#! /bin/sh
+#-----------------------------------------------------------------------------
+# filename:
+# 	INSTALL-HDF5-1.8.19
+#
+# description:
+# 	Installation script module for installing HDF5-1.8.19
+# 	for the SDP (PGS) Toolkit and hdfeos.  
+#       It implements patches to the NCSA 
+# 	installation procedure to allow for trouble-free installation on
+# 	the platforms supported by the SDP (PGS) Toolkit and hdfeos.
+#
+# usage:
+# 	Called from INSTALL-HDF5
+#
+# 	INSTALL-HDF5-1.8.19 [-dbug]
+# 	INSTALL-HDF5-1.8.19 -h[elp]
+# 	INSTALL-HDF5-1.8.19 [-c_rlib]
+#
+# 	  -h      : display this help message and exit
+# 	  -dbug   : install debug version of HDF5
+# 	  -c_rlib : install thread safe HDF5 library
+#
+# notes:
+# 	This is NOT a standalone script.  It is only intended to be run
+# 	by INSTALL-HDF5, the HDF installation script.
+# 
+# author:
+#        Mike Sucher / Applied Research Corp.
+#        Abe Taaheri / Emergent Information Technologies, Inc.
+#        Adura Adekunjo /L3 Communications EER Inc.
+#
+# history:
+#       23-Apr-1996 MES Initial version (file: INSTALL-HDF4.0r1)
+# 	26-Apr-1996 MES Updated PreConfigure compiler logic.
+# 	02-Jul-1996 MES Updated to handle SunOS 5.5
+# 	19-Aug-1996 MES Updated for HDF4.0r2 (file: INSTALL-HDF4.0r2)
+# 	23-Sep-1996 MES Added patch to hdfi.h on dec to avoid potential
+# 			conflict with <rpc/types.h>.
+#       19-Aug-1996 MES Updated for HDF4.1r3 (file: INSTALL-HDF4.1r3)
+#       05-Oct-2000 AT  for machine HP-11 the xdr library libnsl.a needs to be
+#                       loaded as for the SOLARIS. Added code to edit mh-hpux
+#                       file in config directory to include the load flag -lnsl
+#       19-Mar-2001 AT  Added for HDF5 Installation
+#	13-Aug-2001 AA  Modified for solaris8
+#       20-Oct-2003 AT  Update hdf5-1.4.4 to hdf5-1.6.1
+#       16-Mar-2004 AA  Updated hdf5-1.6.1 to hdf5-1.6.2
+#       24-Jan-2005 MP  Updated hdf5-1.6.2 to hdf5-1.6.3 
+#       05-Sep-2005 AT  Updated hdf5-1.6.3 to hdf5-1.6.5
+#       05-Jul-2007 AT  Updated hdf5-1.6.5 to hdf5-1.6.6
+#       09-Jan-2008 AT  Updated hdf5-1.6.6 to hdf5-1.6.7
+#       09-MAy-2009 AT  Updated hdf5-1.6.7 to hdf5-1.8.3
+#       20-Jul-2010 AT  Updated hdf5-1.8.3 to hdf5-1.8.5-snap4
+#       20-Jul-2010 AT  Updated hdf5-1.8.5-snap4 to hdf5-1.8.8
+#       27-Jan-2014 AT  Updated hdf5-1.8.8 to hdf5-1.8.12
+#       17-Sep-2017 AT  Updated hdf5-1.8.12 to hdf5-1.8.19
+#
+#-----------------------------------------------------------------------------
+
+
+#
+# Save starting directory, path
+# Create error message header
+#
+
+start_dir=`pwd`
+start_path=$PATH
+this_script="`basename $0`"
+script_error="$this_script: Error:"
+
+#
+# Get absolute pathname where this script is located
+# This allows the script to locate any needed auxilliary files
+#
+
+script_dir="`dirname $0`"
+abs="`echo $script_dir | cut -c1`"
+if [ "$abs" != "/" ] ; then
+    script_dir=`cd $script_dir;pwd`
+fi
+
+
+#****************************************************************
+#                                                               *
+#                   * * * Functions  * * *                      *
+#                                                               *
+#****************************************************************
+
+#
+# Function to output error message
+#
+
+WriteError()
+{
+    echo ""
+    echo "${this_script}: Error: $*"  >&2
+}
+
+
+#
+# Function to output message to logfile and console
+#
+
+EchoAndLog()
+{
+    if [ "$1" = "-n" ] ; then		# -n: suppress leading blank line
+        shift
+    else
+        echo ""
+        if [ "$log_file" != "" ] ; then
+            echo "" >> $log_file
+        fi
+    fi
+    
+    echo "$*"
+    if [ "$log_file" != "" ] ; then
+         echo "$*" >> $log_file
+    fi
+}
+
+
+#
+# Function to prompt for user response
+#
+
+UserPrompt()
+{
+    if [ "$BRAND" = "linux" ] || [ "$BRAND" = "linux32" ] || [ "$BRAND" = "linux64" ] ; then
+	/bin/echo "$* \c" > /dev/tty
+    else
+	echo "$* \\c" > /dev/tty
+    fi
+    read user_response
+}
+
+
+#
+# Function to output help message and exit
+#
+
+Help()
+{
+    sed -n '/filename:/,/author:/p' $0 | grep -v "author:" | cut -c3-300 | more
+    #this line must be here because it contains the string: "author:"
+    exit
+}
+
+
+#
+# Function to silently emulate the 'which' command 
+#
+
+Which()
+{
+    if [ "$1" = "" ] ; then 
+        WriteError "Which() : Too few arguments." 
+        exit 1 
+    fi
+
+    saveifs="$IFS"
+    IFS=:
+    which_result=0
+    which_cmd=""
+    
+    for dir in $PATH;  do 
+        if [ -x $dir/$1 ] ; then 
+            which_result=1 
+            which_cmd=$dir/$1
+            break 
+        fi 
+    done
+    
+    IFS="$saveifs"
+}
+
+#
+# Function to implement debug version of hdf libraries
+#
+
+PreConfigFixes_dbug()
+{
+    cd $start_dir
+
+    EchoAndLog "Pre-configure for debug ... "
+
+    #
+    # Despite overrides in Makefile.in, the configure script steadfastly
+    # tries to change the compilers.  To get around this, we edit the
+    # file config/<arch-file> to comment out the offending lines that get
+    # get included in the Makefile generated by configure.
+    #
+
+    cd $start_dir/config
+
+    case $BRAND in
+
+        cray  ) 
+		file=mh-unicos;
+		c_opt='-O'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+    
+        dec   ) 
+		file=mh-alpha;
+		c_opt='-Olimit 2048'; c_dbug='-g';
+		f_opt='='; f_dbug='= -g';
+		;;
+    
+        hp    ) 
+		file=mh-hpux;
+		c_opt='-O'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+    
+        ibm   ) 
+		file=mh-aix;
+		c_opt='-O'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+    
+        linux ) 
+		file=mh-linux;
+		c_opt='-ansi'; c_dbug='-ansi -g';
+		f_opt='='; f_dbug='= -g';
+		;;
+        
+        linux32 ) 
+		file=mh-linux;
+		c_opt='-ansi'; c_dbug='-ansi -g';
+		f_opt='='; f_dbug='= -g';
+		;;
+       
+        linux64 ) 
+		file=mh-linux;
+		c_opt='-ansi'; c_dbug='-ansi -g';
+		f_opt='='; f_dbug='= -g';
+		;;
+   
+        macintosh )
+                file=mh-mac;
+                c_opt='-ansi'; c_dbug='-ansi -g';
+                f_opt='='; f_dbug='= -g';
+                ;;
+            
+        macintel )
+                file=mh-mac;
+                c_opt='-ansi'; c_dbug='-ansi -g';
+                f_opt='='; f_dbug='= -g';
+                ;;
+	macintel32 )
+	        file=mh-mac;
+	        c_opt='-ansi'; c_dbug='-ansi -g';
+	        f_opt='='; f_dbug='= -g';
+	        ;;
+	macintel64 )
+	        file=mh-mac;
+	        c_opt='-ansi'; c_dbug='-ansi -g';
+	        f_opt='='; f_dbug='= -g';
+	        ;;
+    
+        cygwin )
+                file=mh-cygwin;
+                c_opt='-ansi'; c_dbug='-ansi -g';
+                f_opt='='; f_dbug='= -g';
+                ;;
+   
+        sgi   ) 
+		file=mh-irix32;
+		if [ "$OSTYPE" = "IRIX" ] ; then
+		    file=mh-irix5;
+		fi
+		c_opt='-O'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+    
+        sgi32 )
+		file=mh-irix32;
+		c_opt='-O' c_dbug='-g';
+		f_opt='-O' f_dbug='-g';
+		;;
+
+        sgi64 )
+		file=mh-irix6;
+		c_opt='-O'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+    
+        sun4  )
+		file=mh-sun; c_opt='-O';
+		c_opt='-O'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+    
+        sun5  )
+		file=mh-solaris;
+		c_opt='-xO2'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+       sun5.8  )
+		file=mh-solaris;
+		c_opt='-xO2'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+       sun5.9  )
+		file=mh-solaris;
+		c_opt='-xO2'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+       sun5.10  )
+		file=mh-solaris;
+		c_opt='-xO2'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+    
+       sun5.11  )
+		file=mh-solaris;
+		c_opt='-xO2'; c_dbug='-g';
+		f_opt='-O'; f_dbug='-g';
+		;;
+    
+        *     ) WriteError "Architecture $BRAND is not supported."
+                exit 1 ;;
+    
+    esac
+
+    if [ ! -f $file.ncsa.default ] ; then
+        mv  $file $file.ncsa.default
+    fi
+    
+    cat $file.ncsa.default |
+    sed "/^CFLAGS/s/$c_opt/$c_dbug/" |
+    sed "/^FFLAGS/s/$f_opt/$f_dbug/" |
+    cat > $file.ncsa
+    
+    mv $file.ncsa $file
+
+    cd $start_dir
+}
+
+
+
+#
+# Function to implement pre-configure installation fixes for linux
+#
+
+PreConfigFixes_linux()
+{
+    cd $start_dir
+
+    EchoAndLog "Pre-configure patching for $BRAND ... "
+
+    #
+    # Despite overrides in Makefile.in, the configure script steadfastly
+    # tries to change the compilers.  To get around this, we edit the
+    # file config/<arch-file> to comment out the offending lines that
+    # get included in the Makefile generated by configure.
+    #
+
+    cd $start_dir/config
+
+    mv mh-linux mh-linux.ncsa
+    sed 's/f77/g77/g' mh-linux.ncsa > mh-linux
+
+    cd $start_dir
+}
+
+#
+# Function to implement pre-configure installation fixes for macintosh
+#
+
+PreConfigFixes_macintosh()
+{
+    cd $start_dir
+        
+    EchoAndLog "Pre-configure patching for $BRAND ... "
+ 
+    #
+    # Despite overrides in Makefile.in, the configure script steadfastly
+    # tries to change the compilers.  To get around this, we edit the
+    # file config/<arch-file> to comment out the offending lines that
+    # get included in the Makefile generated by configure.
+    #
+ 
+    cd $start_dir/config
+ 
+    mv mh-mac mh-mac.ncsa
+    sed 's/f77/g77/g' mh-mac.ncsa > mh-mac
+ 
+    cd $start_dir
+}
+
+PreConfigFixes_cygwin()
+{
+    cd $start_dir/config
+    cd $start_dir 
+}
+
+#
+# Function to implement pre-configure installation fixes for sgi
+#
+
+PreConfigFixes_sgi()
+{
+    cd $start_dir
+
+    EchoAndLog "Pre-configure patching for $BRAND ... "
+
+    #
+    # Despite overrides in Makefile.in, the configure script steadfastly
+    # tries to change the compilers.  To get around this, we edit the
+    # file config/<arch-file> to comment out the offending lines that
+    # get included in the Makefile generated by configure.
+    #
+
+    cd $start_dir/config
+
+    if [ ! -f mh-irix6.ncsa ] ; then
+        mv mh-irix6 mh-irix6.ncsa
+        mv mh-irix32 mh-irix32.ncsa
+        sed 's/n32/32/g' mh-irix32.ncsa > mh-irix32
+        mv mh-irix32 mh-irix32.ncsa
+        sed 's/mips3/mips2/g' mh-irix32.ncsa > mh-irix32
+        mv mh-irix32 mh-irix6
+    fi
+
+    cd $start_dir
+}
+
+
+
+
+#
+# Function to implement pre-configure installation fixes for sgi32
+#
+
+PreConfigFixes_sgi32()
+{
+    cd $start_dir
+
+    EchoAndLog "Pre-configure patching for $BRAND ... "
+
+
+    #
+    # Return to starting directory
+    #
+
+    cd $start_dir
+}
+
+
+#
+# Function to implement pre-configure installation fixes for sgi64
+#
+
+PreConfigFixes_sgi64()
+{
+    cd $start_dir
+
+    EchoAndLog "Pre-configure patching for $BRAND... "
+
+    #
+    # If the SGI is using old R4?00 chips then mips4 is
+    # not supported, so force the use of mips3.
+    #
+
+    cd $start_dir/config
+
+    if [ ! -f mh-irix6.ncsa ] ; then
+	sed 's/mips4/mips3/g' mh-irix6 > mh-irix6.ncsa
+        mv mh-irix6.ncsa mh-irix6
+    fi
+
+    cd $start_dir
+}
+
+
+
+
+#
+# Function to implement pre-configure installation fixes for SunOs 4.x
+#
+
+PreConfigFixes_sun4()
+{
+    cd $start_dir
+
+    EchoAndLog "Pre-configure patching for SunOs `uname -r`... "
+
+    #
+    # Despite overrides in Makefile.in, the configure script steadfastly
+    # tries to make gcc the default C compiler.  To get around this we
+    # edit the file config/mh-sun to comment out the offending lines that
+    # get included in the Makefile generated by configure.
+    #
+
+    cd $start_dir/config
+
+    if [ ! -f mh-sun.ncsa ] ; then
+        mv mh-sun mh-sun.ncsa
+    fi
+
+    cat mh-sun.ncsa |
+    sed '/^CC *=/s/^/#/' |
+    sed '/^CFLAGS *=/s/^/#/' |
+    cat > mh-sun
+
+    cd $start_dir
+}
+
+
+#
+# Function to implement pre-configure installation fixes for SunOs 5.x
+#
+
+PreConfigFixes_sun5()
+{
+    cd $start_dir
+
+    EchoAndLog "Pre-configure patching for SunOs `uname -r`... "
+
+
+
+    #
+    # Return to starting directory
+    #
+
+    cd $start_dir
+
+}
+
+
+#
+# Function to implement pre-configure installation fixes for dec
+#
+
+PreConfigFixes_dec()
+{
+    cd $start_dir/config
+
+    EchoAndLog "Pre-configure patching for $BRAND... "
+
+
+    # Modify mh-alpha to include math library for DEC-ALPHA
+    # version 4.0
+
+    chmod 0755 *
+    mv mh-alpha mh-alpha.ncsa
+    sed 's/#LIBSX/LIBSX/g' mh-alpha.ncsa > mh-alpha
+
+    #
+    # Return to starting directory
+    #
+
+    cd $start_dir
+}
+
+
+
+#
+# Function to implement post-configure installation fixes for dec
+#
+
+PostConfigFixes_dec()
+{
+    cd $start_dir
+
+    EchoAndLog "Post-configure patching for $BRAND... "
+
+    cd $start_dir
+}
+
+
+#
+# Function to implement post-configure installation fixes for sgi
+#
+
+PostConfigFixes_sgi()
+{
+    cd $start_dir
+
+    EchoAndLog "Post-configure patching for $BRAND... "
+#
+# For some reason in sgi for some users LD_LIBRARY_PATH causes 
+# problem inside the hdf5's src/Makefile. Lets redefine it as in INSTALL
+# script before running INSTALL-HDF5
+#
+    LD_LIBRARY_PATH="$ZLIBLIB:$SZIPLIB"
+    export LD_LIBRARY_PATH
+echo "Redefined LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+    cd $start_dir
+}
+
+
+#
+# Function to implement post-configure installation fixes for IBM AIX 4.2
+#
+
+PostConfigFixes_ibm()
+{
+    cd $start_dir/mfhdf/nctest
+ 
+    EchoAndLog "Post-configure patching for IBM `uname -r`... "
+ 
+    # Rename program error.c and edit the Makfile to reflect change
+    # This version of AIX will not compile the program error.c
+    # So I am changing the name so that HDF will install
+ 
+    cp error.c dave.c
+    chmod 0755 Makefile
+    mv Makefile Makefile.ncsa
+    sed 's/error.c/dave.c/g' Makefile.ncsa > Makefile
+    mv Makefile Makefile.ncsa
+    sed 's/error.o/dave.o/g' Makefile.ncsa > Makefile
+ 
+    #
+    # Return to starting directory
+    #
+ 
+    cd $start_dir
+ 
+}
+
+#
+# Function to implement post-configure installation fixes for linux
+#
+
+PostConfigFixes_linux()
+{
+    cd $start_dir
+
+    hdf5_files=`find . -name Makefile -print`
+
+    EchoAndLog "Post-configure patching for linux `uname -r`... "
+
+    for file in $hdf5_files;  do 
+
+	mv $file Makefile.ncsa
+	sed 's^$$(srcdir)/^ /^g' Makefile.ncsa > $file
+	/bin/rm -f Makefile.ncsa
+    done
+
+    cd $start_dir
+}
+
+
+#
+# Function to implement post-configure installation fixes for macintosh
+#
+
+PostConfigFixes_macintosh()
+{
+    cd $start_dir
+ 
+    hdf5_files=`find . -name Makefile -print`
+ 
+    EchoAndLog "Post-configure patching for macintosh `uname -r`... "
+ 
+    for file in $hdf5_files;  do
+ 
+        mv $file Makefile.ncsa
+        sed 's^$$(srcdir)/^ /^g' Makefile.ncsa > $file
+        /bin/rm -f Makefile.ncsa
+    done
+ 
+    cd $start_dir
+}
+
+PostConfigFixes_cygwin()
+{
+    cd $start_dir/config
+    cd $start_dir
+}
+
+#
+# Function to implement post-configure installation fixes for SunOs 5.x
+#
+
+PostConfigFixes_sun5()
+{
+    cd $start_dir
+
+    EchoAndLog "Post-configure patching for SunOs `uname -r`... "
+	mv $install_dir/examples/Makefile $install_dir/examples/Makefile_temp
+	sed "s^export LD_LIBRARY_PATH^#export LD_LIBRARY_PATH^" $install_dir/examples/Makefile_temp >> $install_dir/examples/Makefile
+
+	mv $install_dir/hl/examples/Makefile $install_dir/hl/examples/Makefile_temp
+	sed "s^export LD_LIBRARY_PATH^#export LD_LIBRARY_PATH^" $install_dir/hl/examples/Makefile_temp >> $install_dir/hl/examples/Makefile
+
+    cd $start_dir
+}
+
+
+#
+# Function to set compilers, overriding the NCSA compiler defaults
+#
+    
+SetCompilers()
+{
+    #
+    # Set C compiler based on value of $CC
+    # Set C compilation flags based on value of $CFLAGS
+    # Set FORTRAN compiler based on value of $F77
+    # 
+    # NOTE: 
+    #     This is done recursively for ALL Makefiles because on some
+    #     platforms, the compiler variables are not inherited from the
+    #     the calling Makefile.
+
+
+    EchoAndLog "Overriding NCSA default compiler settings:"
+
+    files=`find . -name Makefile -print`
+
+    if [ "$CC" != "" ] ; then
+
+        if [ "$CFLAGS" = "" ] ; then
+
+            EchoAndLog -n "- setting C compiler to '$CC'"
+            EchoAndLog -n "- setting FORTRAN compiler to '$F77'"
+             
+            for file in $files ; do
+            
+                if [ ! -f $file.ncsa.default ] ; then
+                    mv  $file $file.ncsa.default
+                fi
+
+                cat $file.ncsa.default |
+#                sed '/^CC/s/=.*$'"/= $CC/" | 
+#                sed '/^FC/s/=.*$'"/= $F77/" |
+                cat > $file.ncsa
+
+                cp $file.ncsa $file
+
+            done
+
+        else
+
+            EchoAndLog -n "- setting C compiler to '$CC'"
+            if [ "$CFLAGS" = "-O" ] ; then
+                EchoAndLog -n "- setting C compilation flags to default"
+            else
+                EchoAndLog -n "- setting C compilation flags to '$CFLAGS'"
+            fi
+            EchoAndLog -n "- setting FORTRAN compiler to '$F77'"
+             
+           for file in $files ; do
+
+                if [ ! -f $file.ncsa.default ] ; then
+                    mv  $file $file.ncsa.default
+                fi
+
+                cat $file.ncsa.default |
+#                sed '/^CC/s/=.*$'"/= $CC/" | 
+#                sed '/^CFLAGS/s/=.*$'"/= $CFLAGS/" |
+#                sed '/^FC/s/=.*$'"/= $F77/" |
+                cat > $file.ncsa
+
+                cp $file.ncsa $file
+
+            done
+
+        fi
+
+    else
+
+        EchoAndLog "Warning: Environment variable(s) CC and/or F77 not set."
+        EchoAndLog "If CC is not set, the installation uses NCSA defaults."
+
+    fi
+
+}
+
+
+
+#
+# Function to do architecture-specific pre-configure fixes
+#
+    
+PreConfigure()
+{
+
+    cd $start_dir
+
+    if [ "$dbug" = "1" ] ; then
+	PreConfigFixes_dbug
+    fi
+
+    #
+    # Call architecture-specific functions
+    #
+
+    case $BRAND in
+    
+        cray  ) ;;
+    
+        dec   ) PreConfigFixes_dec;;
+    
+        hp    ) 
+	    # for HP-11 add -lnsl
+	    if [ `uname -r | awk -F. '{print $2}'` = "11" ] ; then
+		mv $install_dir/config/mh-hpux $install_dir/config/mh-hpux_tmp1
+		cat $install_dir/config/mh-hpux_tmp1 |
+		sed '/^LD_XDR/s/=.*$'"/= -lnsl/" |
+		cat > $install_dir/config/mh-hpux_tmp2
+		cp $install_dir/config/mh-hpux_tmp2 $install_dir/config/mh-hpux
+		/bin/rm -f $install_dir/config/mh-hpux_tmp1
+		/bin/rm -f $install_dir/config/mh-hpux_tmp2
+	    fi
+	    ;;
+    
+        ibm   ) ;;
+
+        linux ) 
+		if [ ! -f /bin/f77 ] ; then
+		    PreConfigFixes_linux
+		fi
+		;;
+    
+        linux32 ) 
+		if [ ! -f /bin/f77 ] ; then
+		    PreConfigFixes_linux
+		fi
+		;;
+    
+        linux64 ) 
+		if [ ! -f /bin/f77 ] ; then
+		    PreConfigFixes_linux
+		fi
+		;;
+    
+        macintosh )
+                if [ ! -f /bin/f77 ] ; then
+                    PreConfigFixes_macintosh
+                fi
+                ;;
+        
+        macintel )
+                if [ ! -f /bin/f77 ] ; then
+                    PreConfigFixes_macintosh
+                fi
+                ;;
+       
+        macintel32 )
+                if [ ! -f /bin/f77 ] ; then
+                    PreConfigFixes_macintosh
+                fi
+                ;;
+       
+        macintel64 )
+                if [ ! -f /bin/f77 ] ; then
+                    PreConfigFixes_macintosh
+                fi
+                ;;
+
+        cygwin )
+                if [ ! -f /bin/f77 ] ; then
+                    PreConfigFixes_cygwin
+                fi
+                ;;
+    
+        sgi   ) 
+		if [ "$OSTYPE" = "IRIX64" ] ; then
+		    PreConfigFixes_sgi
+		fi
+		;;
+    
+        sgi32 ) config_flags=irix6_32;;
+
+        sgi64 )
+		cpu_type=`hinv | fgrep CPU | head -1 | cut -d' ' -f3 | cut -b2`
+		if [ "$cpu_type" = "4" ] ; then
+		    PreConfigFixes_sgi64
+		fi
+		;;
+    
+        sun4  ) ;;
+    
+        sun5  ) ;;
+
+        sun5.8  ) ;;
+    
+        sun5.9  ) ;;
+    
+        sun5.10  ) ;;
+    
+        sun5.11  ) ;;
+    
+        *     ) WriteError "Architecture $BRAND is not supported."
+                exit 1 ;;
+    
+    esac
+
+    cd $start_dir
+
+}
+
+
+#
+# Function to do architecture-specific post-configure fixes
+#
+    
+PostConfigure()
+{
+    cd $start_dir
+    
+    
+    #
+    # Check for missing tbl and neqn, patching as needed
+    #
+
+#    PostConfigFixes_NoTblNeqn
+
+
+    #
+    # Do architecture-specific fixes
+    #
+
+    case $BRAND in
+    
+        cray  ) ;;
+    
+        dec   ) ;;
+    
+        hp    ) ;;
+    
+        ibm   ) 
+#	PostConfigFixes_ibm
+		;;
+        ibm   ) ;;
+
+        linux )
+    	PostConfigFixes_linux ;;
+
+        linux32 )
+    	PostConfigFixes_linux ;;
+
+        linux64 )
+    	PostConfigFixes_linux ;;
+
+        macintosh )
+        PostConfigFixes_macintosh ;;
+
+        macintel )
+        PostConfigFixes_macintosh ;;
+    
+        macintel32 )
+        PostConfigFixes_macintosh ;;
+    
+        macintel64 )
+        PostConfigFixes_macintosh ;;
+    
+        cygwin )
+        PostConfigFixes_cygwin ;;
+    
+        sgi   ) ;;
+    
+        sgi32 )
+	PostConfigFixes_sgi ;;
+
+        sgi64 )
+	PostConfigFixes_sgi ;;
+    
+        sun4  ) ;;
+    
+        sun5  ) ;;
+
+        sun5.8  ) ;;
+    
+        sun5.9  ) ;;
+    
+        sun5.10  )
+	PostConfigFixes_sun5 ;;
+        sun5.11  )
+	PostConfigFixes_sun5 ;;
+    
+        *     ) WriteError "Architecture $BRAND is not supported."
+                exit 1 ;;
+    
+    esac
+
+    
+    #
+    # If requested, set compilers to something other than the defaults
+    #
+
+    if [ $set_compilers = 1 ] ; then
+        SetCompilers
+    fi
+
+    cd $start_dir
+}
+
+
+
+#****************************************************************
+#                                                               *
+#                  * * * Main Program  * * *                    *
+#                                                               *
+#****************************************************************
+
+#
+# Get arguments from command line
+#
+
+set_compilers=0
+config_flags=""
+dbug=0
+c_rlib=0
+
+while [ "$1" != "" ] ; do 
+
+    case "$1" in
+
+      -h | help ) Help ;;
+
+      -set_compilers ) set_compilers=1 ;;
+
+      -dbug ) dbug=1 ;;
+
+      -c_rlib ) c_rlib=1;;
+
+      -start_dir ) 
+          if [ "$2" != "" ] ; then
+              start_dir=$2
+              shift
+          else
+              WriteError "No installation directory specified with -start_dir switch."
+              Help
+          fi
+        ;;
+
+
+      * ) echo "$script_error invalid argument '$1'" ; Help ;;
+
+    esac
+
+    shift
+
+done
+
+
+#
+# Make sure we're not running standalone
+#
+
+if [ "$hdf_install_caller" = "" ] ; then
+
+    WriteError "This script can only be run from INSTALL-HDF."
+    Help
+
+else
+
+    # Here we set up the HDF installation directory,
+    # for use by the configure script.  
+    # 
+    # With this release of HDF, we abandon the convention of setting the
+    # installation directory to $HDFHOME/hdf, which was formerly done for
+    # backwards compatibility with the installed HDF directory structure 
+    # that the toolkit was using with the 3.3r4 version of HDF.
+    # 
+    # New releases of the SDP Toolkit  and hdfeos have been updated to handle this
+    # directory change
+
+    install_dir="$HDF5HOME"
+
+    if [ ! -d "$install_dir" ] ; then 	# create the install dir, if needed.
+        mkdir $install_dir
+    fi
+
+fi
+
+
+
+#
+# Announce
+#
+
+EchoAndLog "Running $this_script"
+
+#
+# Do architecture-specific pre-configure fixes
+#
+
+#PreConfigure
+
+    if [ "$dbug" = "1" ] ; then
+	CFLAGS="-g"
+    fi
+	export CFLAGS
+#
+# Run the NCSA-supplied configure script
+#
+
+	if [ "$dbug" = "1" ] ; then
+		config_flags="$config_flags --disable-production"
+	fi
+	if [ "$c_rlib" = "1" ] ; then
+		config_flags="$config_flags --enable-threadsafe --with-pthread=$PTHREAD_HOME"
+	fi
+cd $start_dir
+
+tmp_home=$HOME			# save $HOME
+HOME=`pwd` ; export HOME	# change it to avoid interaction w/ .cshrc
+
+# linux does not support hsize_t which is "long long"
+
+if [ "$BRAND" = "linux" ] || [ "$BRAND" = "linux32" ] || [ "$BRAND" = "linux64" ] ; then
+	EchoAndLog "Running ./configure --disable-shared --with-szlib=$SZIPHOME --prefix=$install_dir $config_flags"
+else
+	EchoAndLog "Running ./configure --disable-shared --with-zlib=$ZLIBHOME --with-szlib=$SZIPHOME --prefix=$install_dir $config_flags"
+fi
+
+if [ "$log_file" != "" ] ; then
+    echo "" >> $log_file
+	if [ "$BRAND" = "linux" ] || [ "$BRAND" = "linux32" ] || [ "$BRAND" = "linux64" ] ; then
+	./configure --disable-shared --with-szlib=$SZIPHOME --prefix=$install_dir $config_flags >> $log_file 2>&1
+	else
+	./configure --disable-shared --with-zlib=$ZLIBHOME --with-szlib=$SZIPHOME --prefix=$install_dir $config_flags >> $log_file 2>&1
+	fi
+else
+    echo ""
+	if [ "$BRAND" = "linux" ] || [ "$BRAND" = "linux32" ] || [ "$BRAND" = "linux64" ] ; then
+	./configure --disable-shared --with-szlib=$SZIPHOME --prefix=$install_dir $config_flags
+	else
+	./configure --disable-shared --with-zlib=$ZLIBHOME --with-szlib=$SZIPHOME --prefix=$install_dir $config_flags
+	fi
+fi
+
+HOME=$tmp_home ; export HOME	# restore $HOME
+
+
+#
+# Do architecture-specific post-configure fixes
+#
+
+
+PostConfigure
+
+
+#
+# Run the make utility to compile the library and utiltites
+#
+
+EchoAndLog "Running make, target=all"
+
+if [ "$log_file" != "" ] ; then
+    echo "" >> $log_file
+    make all >> $log_file 2>&1
+    tmp_status=$?
+else
+    echo ""
+    make all
+    tmp_status=$?
+fi
+
+if [ "$tmp_status" != 0 ] ; then
+    EchoAndLog "Run of 'make all' failed."
+    exit 1
+fi
+
+
+#
+# Run the make utility install the libraries, utilities, includes and man pages 
+#
+
+EchoAndLog "Running make, target=install "
+
+if [ "$log_file" != "" ] ; then
+    echo "" >> $log_file
+    make install >> $log_file 2>&1
+    tmp_status=$?
+else
+    echo ""
+    make install
+    tmp_status=$?
+fi
+
+
+if [ "$tmp_status" != 0 ] ; then
+    EchoAndLog "Run of 'make install' failed."
+    exit 1
+fi
+

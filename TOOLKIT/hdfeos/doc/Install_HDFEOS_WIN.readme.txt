@@ -1,0 +1,239 @@
+#-----------------------------------------------------------------------------
+# filename:
+#       Install_HDFEOS_WIN.README
+#
+# description:
+#       Installation instruction for HDFEOS2.20 on Windows xp
+#       
+# author:
+#       Subing Zeng/ Raytheon STX Corp.
+#       Phuong Nguyen/ L3 Communication, GSI.
+#       Abe Taaheri/ Raytheon SSI
+#
+# history:
+#       02-Aug-1999 Second version
+#       11-OCT-1999 Third version( starting with Fortran support)
+#	  06-Jul-2005 Version 2.13
+#	  19-Feb-2006 Version 2.14
+#	  27-Feb-2008 Version 2.15
+#         15-Jun-2009 Version 2.16
+#         19-Aug-2010 Version 2.17
+#         14-Dec-2011 Version 2.18
+#         05-Nov-2013 Version 2.19
+#         05-Oct-2017 Version 2.20
+#-----------------------------------------------------------------------------
+              
+The instructions which follow assume that you will be using
+the 'zip' files that we provide: hdfeos2_20b.zip (binary file 
+for Windows xp) and hdfeos2_20.zip (source code file along with binaries). 
+Also we have been using "Microsoft Visual Studio 2013" for our windows 
+developement. 
+
+
+Building from Binary Code Release (hdfeos2_20b.zip)
+===============================================
+To install the HDFEOS with the prebuilt libraries, it is assumed that 
+you have done the following:      
+
+      NOTE: THE FOLLOWING INTSTRUTIONS SHOULD BE FINE FOR xp
+
+      1. Download hdfeos2_20b.zip from 
+      ftp://edhs1.gsfc.nasa.gov/edhs/hdfeos/latest_release/windows/, 
+
+      2. On you window, create a directory structure to unpack the 
+	source file. For example: 
+	F:\					(any drive)
+   	MyHDFEOS\				(any folder name)
+        
+
+      3. Copy the hdfeos2_20b.zip to that directory and unpack it by running 
+	WinZip on it.This should create the following directories: hdfeos, 
+	hdf4.2.13_win_x86, jpeg9b-vs2013, zlib1211-dll, and 
+	szip21-vs2013-noenc (no- encoder) 	
+
+	The libraries and include files for hdfeos2.20 are inside:
+	F:\MyHDFEOS\hdfeos\lib		(Release versions of hdfeos and gctp
+					libraries (hdfeos.lib, gctp.lib))
+					(Debug versions of hdfeos and gctp
+					libraries (hdfeosd.lib, gctpd.lib))
+
+	F:\MyHDFEOS\hdfeos\include		( HDFEOS include files )
+
+   	Inside the directories hdf4.2.13_win_x86, jpeg6b-vs2013, zlib1211-dll, 
+	and szip211-vs2013-noenc ( or szip211-vs2013-enc) you can find their 
+	include files and libraries (hd4213.lib, hm4213.lib, xdr.lib, zdll.lib, 
+	libjpeg.lib and szlib.lib).
+
+      4. Run your "Microsoft Visual Studio" application.
+	
+	Assumed you have installed HDF4.2.13 on 
+            
+	F:\MyHDF\hdf4213-win32\
+
+	To specify the header files and linking in the HDFEOS libraries:
+	Select Tools->Options->Projects and Solutions->C++Directories->
+	"Show directories for"->"Include files", add the following directories:
+	
+	$(VCInstallDir)include
+        $(VCInstallDir)atlmfc\include
+        $(WindowsSdkDir)\include
+        $(FrameworkSDKDir)include
+	F:<path to jpeg>\include  
+	F:<path to zlib>\include
+	F:<path to szlib>\include      
+        F:<path to HDF>\include 
+        F:<path to HDFEOS>\include 
+
+	Select Tools->Options->Projects and Solutions->VC++Directories->
+	"Show directories for"->"Library files", add the following directories:
+
+	$(VCInstallDir)lib
+	$(VCInstallDir)atlmfc\lib
+	$(VCInstallDir)atlmfc\lib\i386
+	$(WindowsSdkDir)\lib
+	$(FrameworkSDKDir)lib
+	$(VSInstallDir)
+	$(VSInstallDir)lib
+	F:<path to jpeg>\lib 
+	F:<path to zlib>\lib
+	F:<path to szlib>\lib
+	F:<path to HDF>\lib
+	F:<path to HDFEOS>\lib\WIN
+
+	NOTE: Please note that you may need some other include and lib 
+	directories, depending on your application. Please see 
+	Compile_WIN.readme.txt inside for more details.
+
+
+Building from Source Code Release (hdfeos2_20.zip)
+===============================================
+
+STEP I:  Preconditions
+
+To build the HDFEOS, it is assumed that you have done the following:
+      
+      1. Installed MicroSoft Visual Studio 2013 (or higher)
+    
+      2. Installed jpeg, szip and zlib (see install_jpeg_zlib_szip.txt)
+	(See step 4)
+         
+      3. Installed HDF version4.2.13
+	(see step 4)
+      4. Set up a directory structure to unpack the library. For 
+      	example: 
+
+	    	F:\				(any drive)
+           	MyHDFEOS\			(any folder name)
+
+      5. Copy the source distribution archive to that directory and unpack it 
+      using WinZip on hdfeos2_20.zip. Exract all including 'hdfeos2.19'.  The 
+      directory hdfeos2.19 will contain hdfeos and 'hdfeos_dev' directories. 
+      The directory 'hdfeos_dev' contains several files and directories for 
+      Windows, and the 'hdfeos' directory contains hdfeos source code package.
+
+STEP II: Build HDFEOS library
+
+INSTRUCTIONS FOR INSTALLATION           
+
+      1. Open  F:\myHDFEOS\hdfeos_dev\hdfeos.dsw to begin building the 
+	 Developer Studio project.
+         
+      2. Select Tools->Options->Projects and Solutions->VC++Directories->
+	 "Show directories for"->"Include files", add the following 
+	 directories:
+               
+	 $(VCInstallDir)include
+	 $(VCInstallDir)atlmfc\include
+	 $(WindowsSdkDir)\include
+	 $(FrameworkSDKDir)include
+	 F:<path to jpeg>\include  
+	 F:<path to zlib>\include
+	 F:<path to szlib>\include      
+	 F:<path to HDF>\include 
+	 F:<path to HDFEOS>\include 
+
+      3. Select Tools->Options->Projects and Solutions->VC++Directories->
+	 "Show directories for"->"Library files", add the following 
+	 directories:
+
+	 F:\Program Files\Microsoft Visual Studio 9.0\VC\redist\x86\Microsoft.VC90.CRT
+	 $(VCInstallDir)lib
+	 $(VCInstallDir)atlmfc\lib
+	 $(VCInstallDir)atlmfc\lib\i386
+	 $(WindowsSdkDir)\lib
+	 $(FrameworkSDKDir)lib
+	 $(VSInstallDir)
+	 $(VSInstallDir)lib
+	 F:<path to jpeg>\lib 
+	 F:<path to zlib>\lib
+	 F:<path to szlib>\lib
+	 F:<path to HDF>\lib
+
+      4. Select gctp (and once is done repeat for hdfeos) project. On the 
+	 Project menu selectProject->Properties.
+         Select "General" under "Configuration Properties". In the selection 
+	 window for "Configuration Type" select "Static Library(.lib)" option 
+	 to create output as library.
+
+	 Select folder C/C++->Preprocesssor.
+	 Add the following to "Preprocessor definitions" if they are not there 
+	 alraedy: 
+	 VISUAL_CPLUSPLUS, INTEL86	 
+
+      5. Select "Build", then Select "Configuration Mangger".
+	 Select "Debug" in "Active Solution Configuration" window, check mark 
+	 hdfeos and gctp build boxes and change Configuration to Debug for both
+	 projects.
+	 Select "Build" and "Build Solutions" to
+	 build the Debug version of the hdfeos and gctp tree.
+
+      6. Select "Build", then Select "Configuration Mangger".
+	 Select "Release" in "Active Solution Configuration" window, check 
+	 mark hdfeos and gctp build boxes and change Configuration to Release 
+	 for both projects.
+	 Select "Build" and "Build Solutions" to build the Release version 
+	 of the hdfeos and gctp tree.
+
+	 Please note that you have a choice of building gctp and hdfeos 
+	 separately.
+
+      7. Please check "Release" and "Debug" directories under 
+	 F:\myHDFEOS\hdfeos_dev\hdfeos and F:\myHDFEOS\hdfeos_dev\gctp to 
+	 make sure that libraries have been created sucessfully.
+
+      8. In command prompt window run the installation batch commands 
+	 win32ins.bat
+	 in the directory F:\myHDFEOS\hdfeos_dev, Or double click on
+	 "F:\myHDFEOS\hdfeos_dev\win32ins.bat" file. This will copy *.lib 
+	 files to F:\MyHDFEOS\hdfeos\lib\WIN directory and will remove some 
+	 temporary files, debug and release directories, and all other lib 
+	 directories under "F:\MyHDFEOS\hdfeos\lib" directory (if they exist).
+
+      9. If you are building an application that uses the HDFEOS library,
+	 Please refer to the 
+	 <HDFEOS directory>\hdfeos_dev\compile_WIN.readme.txt 
+	 file for more information on compiling an application with the 
+	 HDFEOS libraries on Windows.
+
+MORE HELPFUL POINTERS
+=====================
+
+Settings... details:
+  If you create your own project, the necessary settings can be
+  read from the hdfeos.dsw file(as text), or from the
+  Project Settings in the Developer Studio project settings 
+  dialog.
+
+    Project
+	  Settings
+	      C/C++
+		  Category
+		     PreProcessor
+			 Code Generation
+			    Use run-time Library
+				   These are all set to use Single-Threaded.
+				   or Single-Threaded debug.
+
+
+
+

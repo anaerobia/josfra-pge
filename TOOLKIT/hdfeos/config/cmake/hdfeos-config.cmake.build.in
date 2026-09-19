@@ -1,0 +1,40 @@
+#-----------------------------------------------------------------------------
+# HDFEOS Config file for compiling against HDFEOS build directory
+#-----------------------------------------------------------------------------
+GET_FILENAME_COMPONENT (SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+#-----------------------------------------------------------------------------
+# User Options
+#-----------------------------------------------------------------------------
+SET (HDFEOS_ENABLE_PARALLEL @HDFEOS_ENABLE_PARALLEL@)
+SET (HDFEOS_BUILD_TOOLS     @HDFEOS_BUILD_TOOLS@)
+SET (HDFEOS_ENABLE_JPEG_LIB_SUPPORT @HDFEOS_ENABLE_JPEG_LIB_SUPPORT@)
+SET (HDFEOS_ENABLE_Z_LIB_SUPPORT @HDFEOS_ENABLE_Z_LIB_SUPPORT@)
+SET (HDFEOS_ENABLE_SZIP_SUPPORT  @HDFEOS_ENABLE_SZIP_SUPPORT@)
+SET (HDFEOS_ENABLE_SZIP_ENCODING @HDFEOS_ENABLE_SZIP_ENCODING@)
+SET (BUILD_SHARED_LIBS    @BUILD_SHARED_LIBS@)
+
+#-----------------------------------------------------------------------------
+# Directories
+#-----------------------------------------------------------------------------
+SET (HDFEOS_INCLUDE_DIRS "@HDFEOS_INCLUDES_BUILD_TIME@")
+
+IF (HDFEOS_BUILD_TOOLS)
+  SET (HDFEOS_INCLUDE_DIR_TOOLS ${HDFEOS_INCLUDE_DIR} )
+ENDIF (HDFEOS_BUILD_TOOLS)
+
+#-----------------------------------------------------------------------------
+# Version Strings
+#-----------------------------------------------------------------------------
+SET (HDFEOS_VERSION_STRING @HDFEOS_VERSION_STRING@)
+SET (HDFEOS_VERSION_MAJOR  @HDFEOS_VERSION_MAJOR@)
+SET (HDFEOS_VERSION_MINOR  @HDFEOS_VERSION_MINOR@)
+
+#-----------------------------------------------------------------------------
+# Don't include targets if this file is being picked up by another
+# project which has already build HDFEOS as a subproject
+#-----------------------------------------------------------------------------
+IF (NOT TARGET "@HDFEOS_PACKAGE@")
+  INCLUDE (${SELF_DIR}/@HDFEOS_PACKAGE@@HDFEOS_PACKAGE_EXT@-targets.cmake)
+  SET (HDFEOS_LIBRARIES "@HDFEOS_LIBRARIES_TO_EXPORT@")
+ENDIF (NOT TARGET "@HDFEOS_PACKAGE@")

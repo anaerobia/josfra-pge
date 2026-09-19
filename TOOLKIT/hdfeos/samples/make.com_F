@@ -1,0 +1,95 @@
+INCDIR = -I$(HDFINC) -I$(HDFEOS_INC)
+LIBDIR = -L$(HDFLIB) -L$(HDFEOS_LIB) -lhdfeos -lGctp -lmfhdf -ldf -ljpeg -lz $(SZIPLIB)/libsz.a -lm
+# /usr/lib/librpc.a
+
+default all:
+	@echo " "; echo " "; \
+	echo " ---- Making *.f samples for swath ----"; \
+	$(F77) $(CFLAGS) -o setupswath.o $(INCDIR) -c setupswath.f; \
+	$(F77) $(CFLAGS) -o setupswath setupswath.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o definefields.o $(INCDIR) -c definefields.f; \
+	$(F77) $(CFLAGS) -o definefields definefields.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o writefields.o $(INCDIR) -c writefields.f; \
+	$(F77) $(CFLAGS) -o writefields writefields.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o appendfield.o $(INCDIR) -c appendfield.f; \
+	$(F77) $(CFLAGS) -o appendfield appendfield.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o inquireswath.o $(INCDIR) -c inquireswath.f; \
+	$(F77) $(CFLAGS) -o inquireswath inquireswath.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o readfields.o $(INCDIR) -c readfields.f; \
+	$(F77) $(CFLAGS) -o readfields readfields.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o subsetswath.o $(INCDIR) -c subsetswath.f; \
+	$(F77) $(CFLAGS) -o subsetswath subsetswath.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o writedimscaleswath.o $(INCDIR) -c writedimscaleswath.f; \
+	$(F77) $(CFLAGS) -o writedimscaleswath writedimscaleswath.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o readdimscaleswath.o $(INCDIR) -c readdimscaleswath.f; \
+	$(F77) $(CFLAGS) -o readdimscaleswath readdimscaleswath.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	echo " "; echo " "; \
+	echo " ---- Making *.f samples for grid ----"; \
+	$(F77) $(CFLAGS) -o setupgrid.o $(INCDIR) -c setupgrid.f; \
+	$(F77) $(CFLAGS) -o setupgrid setupgrid.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o definegdflds.o $(INCDIR) -c definegdflds.f; \
+	$(F77) $(CFLAGS) -o definegdflds definegdflds.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o writegdflds.o $(INCDIR) -c writegdflds.f; \
+	$(F77) $(CFLAGS) -o writegdflds writegdflds.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o inquiregrid.o $(INCDIR) -c inquiregrid.f; \
+	$(F77) $(CFLAGS) -o inquiregrid inquiregrid.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o readgdflds.o $(INCDIR) -c readgdflds.f; \
+	$(F77) $(CFLAGS) -o readgdflds readgdflds.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o subsetgrid.o $(INCDIR) -c subsetgrid.f; \
+	$(F77) $(CFLAGS) -o subsetgrid subsetgrid.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o writedimscalegrid.o $(INCDIR) -c writedimscalegrid.f; \
+	$(F77) $(CFLAGS) -o writedimscalegrid writedimscalegrid.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o readdimscalegrid.o $(INCDIR) -c readdimscalegrid.f; \
+	$(F77) $(CFLAGS) -o readdimscalegrid readdimscalegrid.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	echo " "; echo " "; \
+	echo " ---- Making *.f samples for point ----"; \
+	$(F77) $(CFLAGS) -o setuppoint.o $(INCDIR) -c setuppoint.f; \
+	$(F77) $(CFLAGS) -o setuppoint setuppoint.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o definelevels.o $(INCDIR) -c definelevels.f; \
+	$(F77) $(CFLAGS) -o definelevels definelevels.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o writelevels.o $(INCDIR) -c writelevels.f; \
+	$(F77) $(CFLAGS) -o writelevels writelevels.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o updatelevels.o $(INCDIR) -c updatelevels.f; \
+	$(F77) $(CFLAGS) -o updatelevels updatelevels.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o readlevels.o $(INCDIR) -c readlevels.f; \
+	$(F77) $(CFLAGS) -o readlevels readlevels.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; \
+	$(F77) $(CFLAGS) -o subsetpoint.o $(INCDIR) -c subsetpoint.f; \
+	$(F77) $(CFLAGS) -o subsetpoint subsetpoint.o $(LIBDIR) $(CEXTRAL); \
+	$(RM) $(RMFLAGS) *.o; 
+
+clean:
+	rm -f *.o subsetpoint readlevels updatelevels 
+	rm -f writelevels definelevels setuppoint
+	rm -f subsetgrid readgdflds inquiregrid writegdflds definegdflds
+	rm -f setupgrid subsetswath readfields inquireswath appendfield
+	rm -f writefields definefields setupswath
+	rm -f writedimscalegrid readdimscalegrid
+	rm -f writedimscaleswath readdimscaleswath
+
+
+
+
+
+

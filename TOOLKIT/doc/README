@@ -1,0 +1,1238 @@
+#-----------------------------------------------------------------------------
+# filename:
+# 	README
+#
+# description:
+#       Installation instructions for the SDP Toolkit
+#
+# author:
+#	Mike Sucher / Applied Research Corp.
+#       Phoung Nguyen/ L3 Communications
+#       Adura Adekunjo/L3 Communications GSI.
+#       Abe Taaheri / Raytheon
+#
+# history:
+#       26-Apr-1994 MES Initial version
+#       04-May-1994 MES Revise step 8 to clarify environment variable setup
+#       06-May-1994 MES Revised for latest tar file: PGSTK2v1.01.tar
+#       20-Oct-1994 MES Revised for Release 3 (tar file: SDPTK3v1.00.tar)
+#       24-Oct-1994 MES Added information about AA tools data files.
+# 			Added FORTRAN-90 information.
+#       14-Feb-1995 MES Revised for Release 4 (tar file: SDPTK4v1.00.tar)
+#       17-Feb-1995 MES Updated NOTES.
+#       17-Feb-1995 MES Updated step 8 to include pgs_path note.
+#       11-May-1995 MES Revised for Release 5 (tar file: SDPTK5v1.00.tar)
+# 	19-Jul-1995 MES Revised to reflect new installation procedures.
+# 			Added notes and instructions for HDF installation
+# 	29-Sep-1995 MES Revised for new directory structure with $BRAND
+# 			architecture dependencies.
+# 	28-Nov-1995 MES Revised for IR-1:
+# 			Added table of contents
+# 			Updated and reorganized Installation Instructions
+# 			Updated and reorganized Notes section
+# 			Added IR-1 Toolkit Release Notes
+# 			Updated distribution file name to:
+# 			  <SDPTK-distrib-ir1>.tar.Z (now a compressed file)
+# 	24-Apr-1996 MES Revised for Release A:
+# 			Revised Toolkit Release Notes for Release A
+# 			Updated distribution file name to:
+# 			  <SDPTK-distrib-relA>.tar.Z (now a compressed file)
+# 			Updated HDF installation section
+# 	29-Aug-1996 MES Updated HDF installation section for HDF4.0r2
+# 			Updated DAAC installation procedures.
+# 	18-Oct-1996 MES Added HDF-EOS installation section.
+# 	23-Oct-1996 MES Updated SGI FORTRAN-90 notes section.
+# 	06-Nov-1996 MES Updated distribution file name to:
+# 			  SDPTK5.1.1v1.00.tar.Z
+# 	24-Apr-1997 GSK Updated for SDPTK 5.2 (Release B.0)
+# 	08-Oct-1997 GSK Updated for SDPTK 5.2.1 (Release B.0)
+#	23-Mar-1998 MEDS Updated for SDPTK 5.2.2 (Release 2.0)
+#	10-Apr-1998 MEDS Updated to reflect Version 2.0 for SDPTK 5.2.2
+#	16-Jun-1998 MEDS Updated to reflect Version 5.2.3 for Toolkit and 
+#			  version 2.3 for HDF-EOS
+#	27-Aug-1998 MEDS Updated to reflect Version 5.2.4 for Toolkit and
+#			  version 2.4 for HDF-EOS
+#       07-May-1999 CS Updated to reflect Version 5.2.5 for Toolkit and
+#                         version 2.5 for HDF-EOS and C++ updates
+#       30-Oct-2002 PN Updated to reflect Version 5.2.8v3 for Toolkit,
+#                       version 2.8 for HDF-EOS and version 1.3 for HDF-EOS5  
+#       16-March-2004 AA Updated file to reflect HDF4.2 and hdf5.1.6.2
+#       14-Dec-2011 AT Updated file to reflect HDF4.2.6 and hdf5.1.8.8
+#       19-Feb-2011 AT Updated file to reflect HDF4.2.10 and hdf5.1.8.12
+#       25-Jun-2018 AT Updated file for TK release 5.2.20 
+#
+#-----------------------------------------------------------------------------
+
+Contents
+========
+
+     Version  Toolkit Release Notes
+
+        Multiple architecture support
+
+        DAAC Toolkit Support
+
+        Support for the SGI IRIX64 O/S
+
+        HDF Integration
+
+        HDF-EOS Integration
+
+
+    Installation Instructions
+
+        Preliminary
+
+        Unpacking the distribution file
+
+        Starting the installation procedure
+
+        HDF Installation Section
+
+        HDF-EOS Installation Section
+
+        Toolkit Installation Section
+
+        User Account Setup
+
+        File Cleanup
+
+        AA Tools Data Installation
+
+        Rebuilding the toolkit library
+
+
+    Notes
+
+        Approved toolkit platforms
+
+        Toolkit architecture type names
+
+        Toolkit directory and file environment variables
+
+        Other toolkit environment variables
+
+        Tools provided with this release
+
+        Copyright notice for cfortran.h
+
+
+
+Version 5.2.20 Toolkit Release Notes
+=================================
+
+    Multiple architecture support
+    -----------------------------
+
+        The toolkit has the option of being installed with simultaneous
+        support for multiple architectures.   This means that it is not
+        necessary to install a separate copy of the toolkit for each host
+        architecture to be supported.  Instead, a single copy of the toolkit,
+        installed on a file server in a networked environment, may
+        serve multiple hosts of different architecture types.
+
+        Running concurrent tasks on the toolkit is possible, but it requires
+        that each process be configured so that all output files, including
+        toolkit log files, are written to a separate area to avoid collisions.
+        This is done by using a private customized Process Control File (PCF)
+        for each concurrent task.  Please refer to the User Guide for more
+        information.
+
+        The directory structure of the toolkit has been set up to allow
+        multiple architecture support.  Subdirectories of the toolkit home
+        directory are as follows:
+
+            bin		binary and script executables			Note 1
+            database	data resource files used by the toolkit 	Note 1
+            doc 	documentation
+            include	header files
+            lib 	the toolkit library				Note 1
+            message	message files used by the error/status tools
+            obj 	object files used to build the toolkit library	Note 1
+            runtime	runtime files					Note 2
+            src 	source code
+            test	test area
+
+        Note 1:
+            The directories bin, database, lib and obj all contain
+            architecture-specific files residing in subdirectories named
+            for the architecture.  One such subdirectory will be created
+            for each run of the installation script on a given architecture.
+            Toolkit environment variables are set by the environment
+            scripts to automatically map to the appropriate directories.
+
+            The database directory additionally contains a subdirectory
+            named common for data files shared by all architectures.
+
+        Note 2:
+            The directory runtime contains one subdirectory for each
+            of the supported architectures.  These subdirectories are
+            for architecture-specific runtime files.  Currently the
+            only file distributed in these subdirectories is the
+            default Process Control File (PCF) PCF.relB0, which
+            contains architecture-specific pathnames.  Several files
+            generated at runtime by a PGE (e.g. log files) are set by
+            default (in the PCF) to be created in this directory as
+            well.
+
+
+    DAAC Toolkit Support
+    --------------------
+
+        The toolkit supports DAAC as well as SCF sites.  A single
+        distribution file supports all sites.   The type of toolkit
+        built is determined by command line options to the installation
+        script.
+
+
+    Support for the SGI IRIX64 O/S
+    ------------------------------
+
+        The toolkit fully supports the IRIX64 operating system.  An SGI
+        running IRIX64 can compile and run binaries in three different
+        formats.  The toolkit treats each of these formats as a separate
+        architecture.  The table below gives the formats:
+
+	binary format		compiler flag		toolkit name
+	-------------		-------------		------------
+        old-style 32 bit	-32			sgi
+        new-style 32 bit	-n32			sgi32
+        64 bit 			-64			sgi64
+
+        The old-style 32 bit format is backwards-compatible with
+        32-bit SGI platforms.  The other formats run only under
+        IRIX64.  Please note that SGI plans to drop support for
+	old-style 32 bit format, it is therefore recommended that
+	all users migrate to new-style 32 bit or 64 bit mode.
+
+
+    HDF Integration
+    ---------------
+
+        The toolkit installation procedures include a section
+        which covers the installation of the NCSA HDFfile
+        access package.  HDF has been adopted as the baseline
+        standard for EOSDIS Core System development of data formats 
+        for product generation, archival, ingest, and distribution 
+        capabilities.
+
+        Currently, HDF is only needed in order to build and 
+        use the Digital Elevation Model (DEM), Metadata (MET), EPH, CBP,
+        CSC, and Ancillary Access (AA) tools.  If you do not plan to use 
+        these tools, the HDF installation section may be skipped.  
+        In future releases, there may be greater integration of the 
+        toolkit with HDF.
+
+        An installation script for HDF is included as part of the
+        main SDP Toolkit distribution.  It is provided to simplify
+        the installation of HDF as much as possible, reducing
+        the number of steps in NCSA's own installation procedure.
+
+        This script will be run automatically from the main
+        toolkit installation script.  As of Release B0, the
+        toolkit uses HDF 4.2.13 and hdf5-1.8.19.  The HDF distribution 
+        itself is located in a compressed tar file, called hdf-4.2.13.tar.gz
+        and hdf5-1.8.19.tar.gz which must be downloaded separately.
+
+        With a full installation, HDF requires approximately 30 Mb
+        of disk space, after the installation files are cleaned up.
+        It may be installed in any location, i.e. it does not have
+        to be stored under the SDP Toolkit home directory.  The disk
+        partition where HDF is installed should have about 60 Mb of
+        free space.
+
+
+    HDF-EOS Integration
+    -------------------
+
+        The toolkit installation procedures includes a section
+        which covers the installation of HDF-EOS and HDF-EOS5.
+        HDF-EOS and HDF-EOS5 implements the EOS standard methods for 
+        accessing HDF format files.  Three interfaces are provided:  
+        Point, Swath and Grid.  Please refer to the HDF-EOS User's  
+        Guide for more information.  As of Version 5.2.20, the toolkit 
+        requires HDF-EOS2.20v1.00 and hdf5-1.8.19.  The distribution file 
+        for HDF-EOS and HDF-EOS5, called HDF-EOS2.20v1.00.tar.Z and 
+        HDF-EOS5.1.16.tar.Z is available from the same ftp server
+	where the toolkit distribution files are located.
+
+        The toolkit HDF-EOS and HDF-EOS5 installation is only available 
+        if the toolkit is built with HDF support.  It handles the details
+        of unpacking the distribution file, setting HDF dependencies,
+        and running the  HDF-EOS installation script.
+
+        Currently, HDF-EOS is only needed in order to build and use the
+        Digital Elevation Model (DEM) tools.  If you do not plan to
+	use these tools, the HDF-EOS installation section may be
+	skipped.
+
+        HDF-EOS and HDF-EOS5 may also be installed manually, either 
+        before or after the toolkit is installed.  HDF must be installed
+        before installing HDF-EOS.
+
+
+Installation Instructions
+=========================
+
+    Preliminary
+    -----------
+
+        If HDF and HDF5 are to be installed at this time (recommended), you 
+        must first download the HDF distribution file HDF4.2.13.tar.gz and 
+        hdf5-1.8.19.tar.gz before proceeding.  It may be loaded into any 
+        directory on your system, i.e. it need not reside in the SDP Toolkit 
+        home directory.
+
+        The same applies to the HDF-EOS and HDF-EOS5 distribution file,
+	HDF-EOS2.20v1.00.tar.Z and HDF-EOS5.1.16.tar.Z if you plan to install 
+        HDF-EOS and HDF-EOS5 (recommended) while installing the toolkit.
+
+        Important HDF Note
+        ------------------
+
+            The toolkit-supplied HDF installation script contains various
+            platform-specific patches that allow HDF to be successfully
+            installed on all platforms supported by the toolkit.
+            In most cases, both the libraries and utilities are built.
+            Also, the script automatically sets up the installed HDF
+            directories so that the toolkit can find them.
+
+        Historical Note
+        ---------------
+            Please note the acronym PGS (Product Generation System)
+            is used throughout the toolkit software in place of SDP.
+            This is for historical reasons: the name was changed as
+            of Release 3 of the toolkit.  We regret any confusion
+            this may cause.
+
+
+    Unpacking the distribution file
+    -------------------------------
+
+    1)  Select a location for the SDP Toolkit directory tree.  Installing
+        the toolkit alone requires a disk partition with at least 80 Mb
+        of free space.  If you plan to install HDF in the same partition,
+        you will need at least 110 Mb of free space.
+
+        If you plan to install support for multiple architectures, you
+        will need about 20 Mb Toolkit space + 30 Mb HDF space for each
+        additional architecture supported.
+
+        Multiple Architecture Support Note
+        ----------------------------------
+            As previously mentioned, it is possible to build the toolkit
+            with support for multiple architectures.   The distribution file
+            need only be unpacked once, to support all architectures.
+
+            If the toolkit is to be built with multiple architecture support,
+            the area chosen to unpack the distribution should be on a network
+            file system accessible from all hosts to be supported.  (Please
+            note that the SGIs running IRIX64 support three different
+            architectures.  So, if building a multiple architecture
+            installation to support the IRIX64 only, the filesystem need not
+            be accessible across the network.)
+
+    2)  Copy the file SDPTK5.2.20v1.01.tar.Z to the target directory by
+        typing the command:
+
+    	    cp SDPTK5.2.20v1.01.tar.Z <target-dir>
+
+        where <target-dir> is the full pathname of your target directory.
+
+    3)  Set your default directory to the target directory by typing
+        the command:
+
+            cd <target-dir>
+
+    4)  Uncompress this file and extract the contents by typing the command:
+
+    	    zcat SDPTK5.2.20v1.01.tar.Z | tar xvf -
+
+        This will create a subdirectory of the current directory
+        called TOOLKIT.  This is the top-level toolkit directory,
+        which contains the full toolkit directory structure.
+
+
+    Starting the installation procedure
+    -----------------------------------
+
+    1)  Set your default directory to the top-level toolkit directory by
+        typing the command:
+
+            cd TOOLKIT
+
+        Multiple Architecture Support Note
+        ----------------------------------
+            The toolkit installation script must be run once for each of
+            the architectures to be supported.  To do this, simply login
+            to the desired host and set your directory to the top-level
+            toolkit directory: <target-dir>/TOOLKIT.  Then, proceed to
+            run the installation script, starting at Step 2, below.  The
+            installation runs should be done ONE AT A TIME.  Attempting to
+            run concurrent installation procedures may cause errors.
+
+    2)  Determine options for the toolkit installation script.
+
+        Before running the toolkit installation script, you must determine
+        the command line options appropriate for your site.  These options
+        are referred to in this section as <install-options>.
+
+        These options tell the installation script such things as whether
+        to build for SCF or DAAC, and whether to build for FORTRAN-90
+        compatibility, (FORTRAN-77 is the default).  The table below
+        gives the basic site options.  Other options follow.
+
+            Site	FORTRAN		<install-options>
+            ----	-------		-----------------
+            SCF 	FORTRAN-77 	(none)
+            SCF 	FORTRAN-90	-f90
+            DAAC	FORTRAN-77	-daac
+            DAAC	FORTRAN-90	-daac -f90
+
+        Please refer to part 1 of the Notes section, below, for information
+        about platforms that currently support FORTRAN-90.  When doing a
+        FORTRAN-90 installation, the use of -fc_path option, (see below),
+        is highly recommended.
+	
+	 Specifying installation directory name explicitly - RECOMMENDED
+        ---------------------------------------------------------------
+            When installing the Toolkit in a directory which is being
+            automounted or which is a link, the Toolkit may not be able
+            to correctly determine the name of the directory where you	
+            are installing it.  You can specify the name of the installation
+            explicitly by adding the following to <install-options>:
+
+                 -pgshome <installation directory>
+
+            Where <installation directory> is the top level Toolkit directory
+            name (e.g.: /usr/local/TOOLKIT).
+
+            Note that this option can NOT be used to specify an installation
+            directory other than where the Toolkit has already been created
+            in the steps prior to running the INSTALL script.
+
+        
+	Saving installation results in a log file - RECOMMENDED
+        -------------------------------------------------------
+            If you wish to save the output of the installation run in
+            a log file, add the following to <install-options>:
+
+                 -log <log-file>
+
+            Where <log-file> is the name of the log file.
+
+        Compiling in debug mode
+        -----------------------
+            If you wish to compile the Toolkit in debug mode add the
+            following to <install-options>:
+
+                 -dbug
+
+            This will replace the optimization flag "-O" with "-g" for all
+	    files compiled into the Toolkit library.  This allows Toolkit
+	    routines to be viewed from within a source code debugger.
+
+        Setting the C compiler path
+        ---------------------------
+            To ensure that the proper C compiler is found by the script,
+            you may use the -cc_path option to specify its location.  To
+            do this, add the following to <install-options>:
+
+            -cc_path <C-compiler-path>
+
+            Where <C-compiler-path> is the directory where the desired C
+            compiler is located.  This option should not be needed at most
+            sites.
+
+        Setting the C++ compiler path
+        ---------------------------
+            To ensure that the proper C++ compiler is found by the script,
+            you may use the -cpp_path option to specify its location.  To
+            do this, add the following to <install-options>:
+
+            -cpp_path <C++-compiler-path>
+
+            Where <C++-compiler-path> is the directory where the desired C++
+            compiler is located.  This option should not be needed at most
+            sites.
+
+        Setting the FORTRAN compiler path
+        ---------------------------------
+            To ensure that the proper FORTRAN compiler is found by the
+            script, you may use the -fc_path option to specify its location.
+            To do this, add the following to <install-options>:
+
+                -fc_path <FORTRAN-compiler-path>
+
+            Where <FORTRAN-compiler-path> is the directory where the
+            desired FORTRAN compiler is located.   This is particularly
+            advisable when using FORTRAN-90.
+
+        NAG FORTRAN-90 Note
+        -------------------
+            If using a NAG FORTRAN-90 compiler to build the toolkit library,
+            add the -nag option to <install-options>, after the -f90 and
+            -fc_path options.   This will allow the toolkit to generate
+            the proper C to FORTRAN bindings.  This option should not be
+            used when building the toolkit on the SGI Challenge.  See the
+            note, below.
+
+        SGI Challenge Multiple Architectures Note
+        -----------------------------------------
+            On the SGI (as of IRIX64 6.2), the default is to build the
+	    toolkit in 64-bit mode.  The following table gives the option to
+	    specify the appropriate architecture to be built:
+
+            binary format	architecture	<install-options>
+            -------------	------------	---------------
+            old-style 32 bit	sgi  		(none) (**)
+            new-style 32 bit	sgi32		-sgi32
+            64 bit         	sgi64		-sgi64
+
+	    (**) The Toolkit may be installed in old-style 32 bit mode, but
+                 this is no longer the default and may not be supported in
+	         future releases as SGI is dropping support for this format.
+	         To install the Toolkit in this mode, run the Toolkit without
+	         any special sgi flags and then when prompted for the sgi
+	         mode enter "sgi" (without the quotes) at the appropriate
+	         prompt.
+
+        SGI and SGI Challenge FORTRAN-90 Note
+        -------------------------------------
+            On SGI and SGI Challenge platforms running IRIX 6.2 and earlier,
+            the type of FORTRAN-90 compiler is automatically determined by
+            the script.  On the 32-bit SGI platform, the NAG compiler
+            is used.  On the 64-bit SGI Challenge platform, the compiler
+            chosen depends on the binary architecture type selected.
+
+            The script will override the setting of the -NAG flag, if
+            specified, because only the combinations listed below will build
+            properly.  The following table shows which compiler is used for
+            each architecture:
+
+            binary format	architecture	f90
+            -------------	------------	---
+            old-style 32-bit	sgi  		NAG
+            new-style 32-bit	sgi32		SGI
+            64-bit         	sgi64		SGI
+
+            When the -NAG option is specified, it is a good idea to specify
+            the f90 compiler location via the -fc_path option, (see
+	    "Setting the FORTRAN compiler path", above), to ensure that
+            the script uses the right compiler.
+
+        Installing without a FORTRAN compiler
+        -------------------------------------
+            By default the Toolkit supports the C language and one of either
+	    FORTRAN77 or FORTRAN90.  The installation procedure, therefore,
+	    normally requires a FORTRAN compiler.  If no FORTRAN compiler is
+	    availabe the Toolkit may be installed without a FORTRAN compiler
+	    by specifying -no_ftn on the command line of the bin/INSTALL
+	    script.
+
+	    Note that HDF still requires a FORTRAN compiler.  In order for
+	    the Toolkit to successfully install without a FORTRAN compiler
+	    HDF must be installed independently (i.e. NOT from the Toolkit
+	    INSTALL script) (see HDF Installation Section, below).
+
+  	Using pre-installed HDF,HDF5 and/or HDF-EOS,HDF-EOS5 packages
+        -----------------------------------------------
+             If you have already installed NCSA's HDF and/or HDF5 package, you 
+             can specify the installation location explicitly.  If you do so 
+             the Toolkit installation procedure will not attempt to install HDF 
+             or HDF5, using the installation you have specified instead.  To do 
+             this add the following to <install-options>:
+
+             -hdfhome <HDF installation directory>
+             -hdf5home <HDF5 installation directory>
+
+             where <HDF installation directory> is the HDF directory which
+             contains the bin/ lib/ and include/ sub-directories of the
+             installed HDF package.
+
+             If you have already installed ECS's HDF-EOS and/or HDF-EOS5 package, 
+             you can specify the installation location explicitly.  If you do so the
+             Toolkit installation procedure will not attempt to install HDF-EOS  
+             or HDF-EOS5 using the installation you have specified instead.  To do 
+             this add the following to <install-options>:
+
+             -hdfeos_home <HDF-EOS installation directory>
+             -hdfeos5_home <HDf-EOS installation directory>
+
+             where <HDF-EOS installation directory> is the HDF-EOS directory
+             which contains the bin/ lib/ and include/ sub-directories of the
+             installed HDF-EOS package.
+
+             WARNING: the installation procedure will not make any checks of
+                      the versions of any pre-installed packages you specify
+                      in this way.  It is your responsibility to ensure that
+                      any such packages you specify in this manner are at the
+                      approriate version level for the version of the Toolkit
+                      being installed.
+
+        Installing in batch mode
+        ------------------------
+             By default the Toolkit installation is an interactive procedure.
+             If you would like to run the installation in "batch" mode add
+             the following to <install-options>:
+
+             -batch
+
+             Note that the installation procedure is not as flexible
+ 	     when run in this mode.  Namely, when using the script to install
+ 	     HDF and/or HDF-EOS, these packages will be installed under the
+ 	     TOOLKIT directory (i.e. the default locations for these packages).
+             This behavior cannot be changed, although you MAY still specify
+             the locations of pre-installed versions of these packages using
+             the appropriate <install-options> (see above).  Also if you
+ 	     specify the -dbug switch the Toolkit, HDF and HDF-EOS will all be
+ 	     installed in debug mode.  Finally if you attempt to install HDF
+ 	     and an installed HDF is found in the default location it will be
+ 	     deleted and the whole HDF package will be reinstalled.  If you
+ 	     attempt to install HDF-EOS and an hdfeos directory is found to
+ 	     exist in the default location it will be "re-used".
+
+
+    3)  Run the toolkit installation script.
+
+        Please note that the installation script for this release of the
+        toolkit requires user interaction.  Because of this, it should NOT
+        be run as a background task.   The installation script, bin/INSTALL,
+        is actually a front end for three other scripts: bin/INSTALL-HDF,
+        bin/INSTALL-HDFEOS-Wrap and bin/INSTALL-Toolkit.  Each of
+	these scripts may be run with the -h option to display a usage
+	message.  In most cases, it will not be necessary to run
+	any of these scripts directly from the command line.
+
+        To run the script, type the command:
+
+            bin/INSTALL <install-options>
+
+        where <install-options> is the list of options determined in the
+        the previous step.
+
+        The installation script will then run.   It will output various
+        startup messages, beginning with:
+
+            Toolkit Installation starting at <date/time>
+
+        The script will then output a message discussing the HDF requirement,
+        after which it issues a prompt which gives you an opportunity to quit.
+
+            Continue installation [yes] ?
+
+        To continue the installation, press return.
+
+
+    HDF Installation Section
+    -------------------------
+
+    1)  The script prompts with:
+
+            Is HDF4.2.13 installed at your site [no] ?
+
+        If HDF is not installed, hit return and proceed to step 3,
+        below.
+
+    2)  If you already have the correct version of HDF installed, you
+        may type 'y' and hit return.  In this case, the script will
+        ask where HDF is installed:
+
+            Pathname where directory HDF4.2 is installed [<default>] ?
+
+        Type in the full pathname and hit return.  The script will check
+        to make sure that HDF is really installed there.  Please proceed
+        to the toolkit Installation Section, below.
+
+    3)  The script prompts with:
+
+            Do you wish to install HDF4.2.13 now [yes] ?
+
+        Hit return to continue.
+
+    4)  The script responds with:
+
+            Running the HDF Installation Script ...
+
+        It may also output a few informational messages, depending on
+        the installation options selected.
+
+    5)  By default, the script looks for the distribution file in
+        your current and parent directories.  If the file is found in
+        either of these locations, the script will continue to the next
+        step. Otherwise, it will prompt with:
+
+            Pathname where HDF4.2.13.tar.gz is located ?
+
+        Please enter the correct location and hit return.
+
+    6)  The script then asks where the HDF directory will be created.
+        The default is <toolkit-home-directory>/hdf/$BRAND, where
+        $BRAND is the toolkit architecture being built, given by the
+        table in Note 2 of the NOTES section, below.
+
+            Pathname where directory 'HDF4.2.13' will be created [<default>] ?
+
+        If you want HDF installed elsewhere, please enter the pathname
+        at the prompt.  Otherwise, simply hit return to continue.
+
+        Multiple Architecture Support Note
+        ----------------------------------
+            A copy of the HDF installation must be built for each of the
+            architectures to be supported by this toolkit installation.
+            We therefore recommend using the default HDF directory, suggested
+            by the installation procedure, as it helps keep track of which
+            architecture was used to build HDF.
+
+    7)  The script asks you to verify the information entered, prompting with:
+
+            Continue [yes] ?
+
+        Hit return to continue.   The contents of the distribution file
+        are then extracted into the specified location, and the installation
+        procedure is run.
+
+    8)  This completes the interactive portion of the HDF installation.
+        When the HDF section is complete, it outputs the message:
+
+            ------------------------------------------------------------
+
+                HDF installation ending at: <date/time>
+
+            ------------------------------------------------------------
+
+
+    HDF-EOS Installation Section
+    ----------------------------
+
+    1)  The script prompts with:
+
+            Is HDF-EOS2.20v1.00 installed at your site [no] ?
+
+        If HDF-EOS is not installed, hit return and proceed to step 3,
+        below.
+
+    2)  If you already have the correct version of HDF-EOS installed, you
+        may type 'y' and hit return.  In this case, the script will
+        ask where HDF-EOS is installed:
+
+            Pathname where HDF-EOS2.20v1.00 is installed [<default_path>]
+
+
+        Type in the full pathname and hit return.  The script will check
+        to make sure that HDF-EOS is really installed there.  Please proceed
+        to the toolkit Installation Section, below.
+
+    3)  The script prompts with:
+
+            Do you wish to install HDF-EOS2.20v1.00 now [yes] ?
+
+        Hit return to continue.
+
+    4)  The script responds with:
+
+            Installing HDF-EOS ...
+
+        It may also output a few informational messages, depending on
+        the installation options selected.
+
+    5)  By default, the script looks for the distribution file in
+        your current and parent directories.  If the file is found in
+        either of these locations, the script will continue to the next
+        step. Otherwise, it will prompt with:
+
+            Pathname where HDF-EOS2.20v1.00.tar.Z is located ?
+
+        Please enter the correct location and hit return.
+
+    6)  The script then asks where the HDF directory will be created.
+        The default is <toolkit-home-directory>.
+
+            Pathname where directory 'hdfeos' will be created [<default>] ?
+
+        If you want HDF-EOS installed elsewhere, please enter the pathname
+        at the prompt.  Otherwise, simply hit return to continue.  If
+        installing for an additional architecture, (refer to the  Multiple
+        Architecture Support Note in Step 1 of "Starting the installation
+        procedure"), use the same directory as for the first instance of
+        HDF-EOS - a single copy will support multiple architectures.
+
+    7A) Single-Architecture Installation
+
+        If this is a single-architecture installation, or the first platform
+        of a multiple-architecture installation, do this step.  Otherwise
+        proceed to step 7B.
+
+        The script asks you to verify the information entered, prompting with:
+
+            Continue [yes] ?
+
+        Hit return to continue.   The contents of the distribution file
+        are then extracted into the specified location, and the installation
+        procedure is run.
+
+        Proceed to step 8
+
+    7B) Multiple-Architecture Installation
+
+        If this is an additional platform in a multiple-architecture
+        installation, i.e. the INSTALL script is being run again to add
+        support for an additional architecture, (refer to the  Multiple
+        Architecture Support Note in Step 1 of "Starting the installation
+        procedure"), proceed as follows:
+
+        The script asks you to verify the information entered, prompting with:
+
+            Continue [yes] ?
+
+        Hit return to continue.  The script should respond with;
+
+            The directory hdfeos already exists.
+            [O]verwrite, [R]e-use or [Q]uit (default) ?
+
+        Type 'R' and hit return.  The script will build HDF-EOS for
+        the new architecture using the existing copy of the directory
+        structure.  Libraries and executables will be added to the
+        architecture-specific subdirectories of the HDF-EOS 'bin' and
+        'lib' directories, respectively. Do NOT use the Overwrite
+        option - it will clobber the previous architecture-specific
+        installation(s).
+
+    8)  This completes the interactive portion of the HDF-EOS installation.
+        When the HDF-EOS section is complete, it outputs the message:
+
+            ------------------------------------------------------------
+
+                HDFEOS installation ending at: <date/time>
+
+            ------------------------------------------------------------
+
+        For information about user setup, as well as instuctions for
+        compiling and linking with HDF-EOS,  Refer to the file README
+        in the HDF-EOS 'doc' directory.
+
+
+    Toolkit Installation Section
+    ----------------------------
+
+    1A) SCF Installation
+
+        If the SCF version of the toolkit is being built (the default),
+        the script outputs the messages:
+
+            Running the Toolkit Installation Script ...
+
+            Toolkit installation script: INSTALL-Toolkit
+            Starting at: <date/time>
+
+            The SCF version of the toolkit library libPGSTK.a will be built
+            .
+            .
+            .
+
+
+    1B) DAAC Installation
+
+        If the DAAC version of the toolkit is being built (-daac option),
+        the script outputs the messages:
+
+            Running the Toolkit Installation Script ...
+
+            Toolkit installation script: INSTALL-Toolkit
+            Starting at: <date/time>
+
+            The DAAC version of the toolkit library libPGSTK.a will be built
+            .
+            .
+            .
+
+    2)  The toolkit installation script outputs status messages as it goes,
+        ending with:
+
+    	    INSTALL-Toolkit completed successfully at <date/time>
+
+        If an error occurred during the installation process, the last message
+        will appear as:
+
+            INSTALL-Toolkit completed with errors at <date/time>
+
+        NOTE:  If the installation was run with the -log option, the above
+        messages will appear only in the log file, not on the screen.
+
+
+    3)  Wait for completion messages.  If no errors were encountered during
+        either HDF or toolkit installation, the final script message is:
+
+            SDP Toolkit installation completed at <date/time>
+
+        Otherwise messages of the following form will appear:
+
+            INSTALL: Error: <error message>
+            SDP Toolkit installation canceled
+
+
+    4)  Review the installation log.
+
+        Every attempt has been made to trap all possible installation errors
+        and report them at the end of the installation process.  Nonetheless,
+        it is a good idea to review the installation log to verify that it
+        completed without errors.  If errors were noted, the log can help to
+        identify precisely what went wrong.  Please note that some warning
+        messages, (NOT fatal errors), may occur in the course of a normal
+        successful installation run.
+
+
+    User Account Setup
+    ------------------
+
+    Once the toolkit has been installed, the accounts of SDP toolkit users
+    must be set up to define environment variables needed to compile and
+    run code with the toolkit (see parts 2 and 3 of the Notes section, below).
+    The type of setup depends on the user's login shell.
+
+    1A) C shell (csh) users:
+
+        Edit the SDP Toolkit user's .cshrc file to include ONLY ONE
+        of the following two lines:
+
+        (EITHER:)
+ 	    source <SDP-home-dir>/bin/$BRAND/pgs-env.csh
+        (OR:)
+ 	    source <SDP-home-dir>/bin/$BRAND/pgs-dev-env.csh
+
+ 	where <SDP-home-dir> is the full path of the toolkit home
+        directory, and $BRAND is an architecture-specific value for
+        your host.  Please refer to part 2 of the Notes section,
+        below, to determine the correct value.
+
+        The script pgs-env.csh sets up all the variables discussed in
+        part 2 of the Notes section, below, and it adds the toolkit
+        bin directory to the user path.
+
+        The script pgs-dev-env.csh sets up all of the variables
+        set by pgs-env.csh and adds the toolkit bin directory to the
+        user path.  In addition, it automatically sets up the compiler
+        flag variables discussed in part 3 of the Notes section
+        below, to work on any of the system environments listed in
+        part 1 of the Notes section, below.
+
+        The environment variables will become available during all
+        subsequent login sessions.  To activate them for the current
+        session, simply type one of the two lines listed above, at the
+        Unix prompt.
+
+        Note: setting of users PGS_PC_INFO_FILE shell environment variable
+        ------------------------------------------------------------------
+	    The scripts pgs-env.csh and pgs-dev-env.csh will by default
+	    define the environment variable PGS_PC_INFO_FILE to have
+	    the value $PGSRUN/$BRAND/PCF.relB0 (see Note 3, below).
+	    Individual users should make local copies of this file and
+	    then set the environment variable PGS_PC_INFO_FILE to point
+	    to this local copy, which should me modified to suit the
+	    purposes of the user.  This can be done by adding the following
+	    line to the users .cshrc file (e.g.):
+
+	    setenv PGS_PC_INFO_FILE $HOME/PCF.relB0
+
+	    This should be done in the .cshrc file AFTER the file pgs-env.csh
+	    (or pgs-dev-env.csh) has been used to establish the users Toolkit
+	    environment.
+
+        Note regarding path setup with pgs-dev-env.csh
+        ----------------------------------------------
+            The script pgs-dev-env.csh also makes available a variable
+            called pgs_path.  This can be added to the user's path to
+            ensure that it accesses the directories necessary for the
+            compilers and other utilities used to generate executable
+            programs.  It is not added to the user path by default,
+            because in many cases it adds unnecessary complexity to
+            the user path.  To add pgs_path to the user path, modify
+            the SDP Toolkit user's .cshrc file to include the following:
+
+                set my_path = ($path)			# save path
+                source <SDP-HOME-DIR>/bin/$BRAND/pgs-dev-env.csh # PGS setup
+                set path = ($my_path $pgs_path)		# add pgs_path
+
+            INSTEAD OF either of the two options listed at the beginning
+            of this step.  Note that it is the user's responsibility to
+            set up his or her own path so that it doesn't duplicate the
+            directories set up in pgs_path.  Please also note that the
+            pgs_path is added AFTER the user's path.  This way, the
+            user's directories will be searched first when running Unix
+            commands.
+
+    1B) Korn shell (ksh) users:
+
+        Edit the SDP Toolkit user's .profile file to include ONLY ONE
+        of the following two lines:
+
+        (EITHER:)
+ 	    . <SDP-home-dir>/bin/$BRAND/pgs-env.ksh
+        (OR:)
+ 	    . <SDP-home-dir>/bin/$BRAND/pgs-dev-env.ksh
+
+ 	where <SDP-home-dir> is the full path of the toolkit home
+        directory, and $BRAND is an architecture-specific value for
+        your host.  Please refer to part 2 of the Notes section,
+        below, to determine the correct value.
+
+        The script pgs-env.ksh sets up all the variables discussed in
+        part 2 of the Notes section, below, and it adds the toolkit
+        bin directory to the user path.
+
+        The script pgs-dev-env.ksh sets up all of the variables
+        set by pgs-env.ksh and adds the toolkit bin directory to the
+        user path.  In addition, it automatically sets up the compiler
+        flag variables discussed in part 3 of the Notes section
+        below, to work on any of the system environments listed in
+        part 1 of the Notes section, below.
+
+        The environment variables will become available during all
+        subsequent login sessions.  To activate them for the current
+        session, simply type one of the two lines listed above, at the
+        Unix prompt.
+
+        Note: setting of users PGS_PC_INFO_FILE shell environment variable
+        ------------------------------------------------------------------
+	    The scripts pgs-env.ksh and pgs-dev-env.ksh will by default
+	    define the environment variable PGS_PC_INFO_FILE to have
+	    the value $PGSRUN/$BRAND/PCF.relB0 (see Note 3, below).
+	    Individual users should make local copies of this file and
+	    then set the environment variable PGS_PC_INFO_FILE to point
+	    to this local copy, which should me modified to suit the
+	    purposes of the user.  This can be done by adding the following
+	    lines to the users .profile file (e.g.):
+
+	    PGS_PC_INFO_FILE=$HOME/PCF.relB0
+	    export PGS_PC_INFO_FILE
+
+	    This should be done in the .profile file AFTER the file
+	    pgs-env.ksh (or pgs-dev-env.ksh) has been used to establish the
+	    users Toolkit environment.
+
+        Note regarding path setup with pgs-dev-env.ksh
+        ----------------------------------------------
+            The script pgs-dev-env.ksh also makes available a variable
+            called pgs_path.  This can be added to the user's path to
+            ensure that it accesses the directories necessary for the
+            compilers and other utilities used to generate executable
+            programs.  It is not added to the user path by default,
+            because in many cases it adds unnecessary complexity to
+            the user path.  To add pgs_path to the user path, modify
+            the SDP Toolkit user's .profile file to include the following:
+
+                my_path="$PATH"				    # save path
+                . <SDP-HOME-DIR>/bin/$BRAND/pgs-dev-env.ksh # PGS setup
+                PATH="$my_path:$pgs_path" ; export PATH     # add pgs_path
+
+            INSTEAD OF either of the two options listed at the beginning
+            of this step.  Note that it is the user's responsibility to
+            set up his or her own path so that it doesn't duplicate the
+            directories set up in pgs_path.  Please also note that the
+            pgs_path is added AFTER the user's path.  This way, the
+            user's directories will be searched first when running Unix
+            commands.
+
+    1C) Bourne shell (sh) users:
+
+        Set up the required toolkit environment variables by appending
+        the contents of the file <SDP-home-dir>/bin/$BRAND/pgs-env.ksh
+        or the file <SDP-home-dir>/bin/$BRAND/pgs-dev-env.ksh to the end
+        of the SDP Toolkit user's .profile, where <SDP-home-dir> is the
+        full path of the toolkit home directory, and $BRAND is an
+        architecture-specific value for your host.  Please refer to part
+        2 of the Notes section, below, to determine the correct value.
+
+        The environment variables will become available during all
+        subsequent login sessions.  To activate them, log out and
+        then log back in.
+
+        Note: setting of users PGS_PC_INFO_FILE shell environment variable
+        ------------------------------------------------------------------
+	    The files pgs-env.csh and pgs-dev-env.csh will by default
+	    define the environment variable PGS_PC_INFO_FILE to have
+	    the value $PGSRUN/$BRAND/PCF.relB0 (see Note 3, below).
+	    Individual users should make local copies of this file and
+	    then set the environment variable PGS_PC_INFO_FILE to point
+	    to this local copy, which should me modified to suit the
+	    purposes of the user.  This can be done by adding the following
+	    lines to the users .profile file (e.g.):
+
+	    PGS_PC_INFO_FILE=$HOME/PCF.relB0
+	    export PGS_PC_INFO_FILE
+
+	    This should be done in the .profile file AFTER the file
+	    pgs-env.ksh (or pgs-dev-env.ksh) has been has been included.
+
+
+    File Cleanup
+    ------------
+
+    Once the toolkit has been built and tested, you can delete certain
+    temporary files and directories to save some disk space.   Note
+    that once these files have been removed, you will need to unpack
+    the original distribution file in order to re-do the installation.
+    To remove these files:
+
+        cd <SDP-home-dir>/bin/$BRAND
+        /bin/rm -r tmp			# delete temp files used in bin
+
+        cd <SDP-home-dir>/database/common/CBP
+        /bin/rm de200.dat		# delete ephemeris ASCII file
+
+
+    AA Tools Data Installation
+    --------------------------
+
+    If you plan to use the Ancillary/Auxiliary (AA) data access tools, you
+    must now install the AA tools data files, located in an additional
+    compressed tar file, which must be downloaded separately.  The
+    installation instructions are located in <SDP-home-dir>/doc/README-AAdata.
+
+
+    Rebuilding the toolkit library
+    ------------------------------
+
+    The toolkit installation procedure now makes it easy to rebuild the
+    toolkit library without having to re-install the entire toolkit.
+    This may be useful in the event that any problems are encountered
+    during the installation process.
+
+    1)  To rebuild the toolkit library do the following:
+
+        Set directory.
+            cd <SDP-home-dir>
+
+        Type:
+            bin/INSTALL-Toolkit <install-options> -lib_only
+
+        where <install-options> are the installation options set in
+        step 2 of Starting the Installation Procedure, above.
+
+
+
+Notes
+=====
+
+    1)  Approved toolkit platforms
+
+        The SDP Toolkit was built and tested in a multi-platform environment.
+        The list of approved platforms, which includes information about
+        operating system and compiler versions, may be found in Table 5-1
+        of Section 5 in the latest SDP Toolkit User's Guide for the ECS
+        Project.
+
+
+    2)  Toolkit architecture type names
+
+        To track architecture dependencies, the toolkit defines the
+        environment variable $BRAND.  Following is a list of valid values
+        for this variable, which is referred to throughout this document:
+
+        $BRAND		Architecture
+        ======		============
+
+        dec 		DEC Alpha
+        hp 		HP 9000
+        ibm 		IBM RS-6000
+        sgi 		SGI / SGI Power Challenge (old-style 32-bit mode toolkit)
+        sgi32 		SGI / SGI Power Challenge (new-style 32-bit mode toolkit)
+        sgi64 		SGI / SGI Power Challenge (64-bit mode toolkit)
+        sun5 		SunOS 5.x
+        linux   	Red Hat 7.0 (both 32 qnd 64 bit nodes)
+	macintosh     	Power Mac
+	macintel        Mac with Intel chip (both 32 and 64 bit modes)
+	cygwin		CYGWIN (32-bit mode)
+
+
+    3)  Toolkit directory and file environment variables
+
+        In order to use the SDP Toolkit libraries and utilities, a number of
+        environment variables MUST be set up to point to SDP directories
+        and files.  These variables are automatically set up in User Account
+        Setup section of the installation instructions.  They are
+        listed here for reference:
+
+	name			value			   description
+	====			=====			   ===========
+
+	PGSHOME 		<install-path>/TOOLKIT	   top-level directory
+
+	(where <install-path> is the absolute directory path above TOOLKIT)
+
+	PGSBIN 			$PGSHOME/bin/$BRAND	  executable files
+	PGSDAT 			$PGSHOME/database/$BRAND  database files
+	PGSINC 			$PGSHOME/include	  header files
+	PGSMSG 			$PGSHOME/message	  SMF message files
+	PGSLIB 			$PGSHOME/lib/$BRAND  	  library files
+	PGSOBJ 			$PGSHOME/obj/$BRAND       toolkit object files
+	PGSRUN 			$PGSHOME/runtime          runtime work files
+	PGSSRC 			$PGSHOME/src		  toolkit source files
+	PGSTST 			$PGSHOME/test		  test area
+
+	PGS_PC_INFO_FILE        $PGSRUN/$BRAND/PCF.relB0  Process Control File
+
+
+    4)  Other toolkit environment variables
+
+        In addition, the makefiles which are used to build the libraries
+        require certain machine-specific environment variables.  These set
+        compilers, compilation flags and libraries, allowing a single set of
+        makefiles to serve on multiple platforms.  The User Account Setup
+        section of the installation instructions explains how to set them up.
+        They are listed here for reference:
+
+	name			description
+	====	 		===========
+
+	CC 			C compiler
+	CFLAGS 			default C flags (optimize, ANSI)
+	C_CFH 			C w/ cfortran.h callable from FORTRAN
+	CFHFLAGS 		CFLAGS + C_CFH
+	F77 			FORTRAN compiler
+	F77FLAGS		common FORTRAN flags
+	F77_CFH			FORTRAN callable from C w/ cfortran.h
+	F77_C_CFH 	 	FORTRAN calling C w/ cfortran.h
+	F77_C_LIB  		C lib called by FORTRAN main
+
+
+    5)  Tools provided with this release
+
+        For a complete list of the tools provided with this release of the
+        SDP Toolkit, please refer to table 1-2 of Section 1 in the latest
+        SDP Toolkit User's Guide for the ECS Project.
+
+    6)  Copyright notice for cfortran.h
+
+        The majority of the SDP Toolkit functions are written in C.
+        These C-based tools include the file cfortran.h, using it to
+        generate machine-independent FORTRAN bindings. The cfortran.h
+        facility includes the following notice which must accompany
+        distributions that use it:
+
+THIS PACKAGE, I.E. CFORTRAN.H, THIS DOCUMENT, AND THE CFORTRAN.H EXAMPLE
+PROGRAMS ARE PROPERTY OF THE AUTHOR WHO RESERVES ALL RIGHTS. THIS PACKAGE AND
+THE CODE IT PRODUCES MAY BE FREELY DISTRIBUTED WITHOUT FEES, SUBJECT TO THE
+FOLLOWING RESTRICTIONS:
+- YOU MUST ACCOMPANY ANY COPIES OR DISTRIBUTION WITH THIS (UNALTERED) NOTICE.
+- YOU MAY NOT RECEIVE MONEY FOR THE DISTRIBUTION OR FOR ITS MEDIA
+  (E.G. TAPE, DISK, COMPUTER, PAPER.)
+- YOU MAY NOT PREVENT OTHERS FROM COPYING IT FREELY.
+- YOU MAY NOT DISTRIBUTE MODIFIED VERSIONS WITHOUT CLEARLY DOCUMENTING YOUR
+  CHANGES AND NOTIFYING THE AUTHOR.
+- YOU MAY NOT MISREPRESENTED THE ORIGIN OF THIS SOFTWARE, EITHER BY EXPLICIT
+  CLAIM OR BY OMISSION.
+
+THE INTENT OF THE ABOVE TERMS IS TO ENSURE THAT THE CFORTRAN.H PACKAGE NOT BE
+USED FOR PROFIT MAKING ACTIVITIES UNLESS SOME ROYALTY ARRANGEMENT IS ENTERED
+INTO WITH ITS AUTHOR.
+
+THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
+EXPRESSED OR IMPLIED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE
+SOFTWARE IS WITH YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST
+OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION. THE AUTHOR IS NOT RESPONSIBLE
+FOR ANY SUPPORT OR SERVICE OF THE CFORTRAN.H PACKAGE.
+
+                                              Burkhard Burow
+                                              burow@vxdesy.cern.ch
+

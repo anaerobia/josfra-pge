@@ -1,0 +1,35 @@
+Last update of this file: 1997-08-26
+
+The files in this directory come directly from the udunits package
+(see COPYRIGHT, ORIGIN and VERSION files).  The version in use here
+is 1.11.5 (unless the file VERSION indicates a later version).
+
+The files in the distribution tar file "udunits.tar.Z" have been somewhat
+rearranged and the makefile is NOT based on the udunits Makefile (i.e. it
+is an SDP Toolkit original).
+
+The files in this directory come from the tar file directory:
+
+udunits-1.11.5/src/lib
+
+The file udunits.dat from that direcotry has been moved to the Toolkit
+database directory: $PGSHOME/database/common/CUC.
+
+The include file from the (above udunits) directory as well as several include
+files from the tar file directory:
+
+udunits-1.11.5/port/misc
+
+have been moved to $PGSINC/CUC.
+
+All files were created by untarring the distribution tar file and running
+"configure" in the directory:
+
+udunits-1.11.5/src
+
+on a SunOS 5.5.1 platform (the configure program was also run on the following
+standard UNIX platforms: dec, hp, ibm, sgi--no significant differences in
+source code or include files were found, so the files from the sun5 configure
+are used here for all platforms).
+
+No udunits source code or include files have been otherwise modified.

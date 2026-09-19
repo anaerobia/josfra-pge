@@ -1,0 +1,1 @@
+#error findpos() has moved into mkformat.c

@@ -1,0 +1,4 @@
+cmake_minimum_required (VERSION 2.8.10)
+PROJECT (GCTP C CXX)
+
+ADD_SUBDIRECTORY (${GCTP_SOURCE_DIR}/src      ${GCTP_BINARY_DIR}/src)

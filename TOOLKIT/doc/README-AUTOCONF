@@ -1,0 +1,457 @@
+#-----------------------------------------------------------------------------
+# filename:
+# 	AUTOCONF_INSTALL
+#
+# description:
+#       Autoconf installation instructions for the SDP Toolkit
+#
+# author:
+#	Matthew Yun / Raytheon
+#
+# history:
+#       1-Aug-2013 Initial version
+#
+#-----------------------------------------------------------------------------
+
+Contents
+========
+
+    Supported/Tested Architectures
+
+    Installation Instructions
+
+        Unpacking the distribution file
+
+	Linking Libraries
+
+        Quick Setup
+  
+        Toolkit Installation Section
+
+	    Fortran
+
+	    32/64-bit architectures
+
+	    Debug flag
+	
+	    AA Libraries
+
+	    Prefix
+
+	    Solaris-PGSINC (for Solaris users!)
+
+        Cleanup
+
+    Notes
+	
+	Autotools
+
+	configure.ac
+
+	Makefile.am
+
+	Running autotools
+
+	**bin directory scripts
+
+	**Testing
+
+	message directory header files
+
+	Solaris message directory
+
+(** requires attention soon)
+
+
+Supported/Tested Architectures
+==============================
+
+    Multiple architecture support
+    -----------------------------
+	The toolkit was meant to be installed in various different
+	architectures. The bin directory and lib directory are divided by
+	the architectures that the user has installed the toolkit onto.
+	Refer to the README document for more information.
+
+    Tested architectures
+    --------------------
+	The SDP Toolkit have been tested on the listed architectures:
+	
+	    -Linux x86_64 (Redhat) 32/64-bit
+	    -Solaris 5.10
+	    -Macintel 32/64-bit
+	    -Cygwin 5.1
+
+
+Installation Instructions
+=========================
+
+    Unpacking the distribution file
+    -------------------------------
+    1)  Select a location for the SDP Toolkit directory tree.  Installing
+        the toolkit alone requires a disk partition with at least 80 Mb
+        of free space.  If you plan to install HDF in the same partition,
+        you will need at least 110 Mb of free space.
+
+        If you plan to install support for multiple architectures, you
+        will need about 20 Mb Toolkit space + 30 Mb HDF space for each
+        additional architecture supported.
+
+    2)  Copy the file SDPTK5.2.20v1.01.tar.Z to the target directory by
+        typing the command:
+
+    	    cp SDPTK5.2.20v1.01.tar.Z <target-dir>
+
+        where <target-dir> is the full pathname of your target directory.
+
+    3)  Set your default directory to the target directory by typing
+        the command:
+
+            cd <target-dir>
+
+    4)  Uncompress this file and extract the contents by typing the command:
+
+    	    zcat SDPTK5.2.20v1.01.tar.Z | tar xvf -
+
+        This will create a subdirectory of the current directory
+        called TOOLKIT.  This is the top-level toolkit directory,
+        which contains the full toolkit directory structure.
+
+    Linking Libraries
+    -----------------
+	In order to compile the SDP Toolkit onto a specific architecture,
+	you must have already installed several packages that are specific
+	to that particular architecture. Each package must contain a lib and
+	include directory within their top source directory in order for the
+	configure file to detect the proper files it needs to compile the
+	toolkit. The following lists the packages needed in order to compile:
+	
+		-HDF4
+		-HDF5
+		-szlib/szip
+		-zlib
+		-jpeg
+		-HDFEOS
+		-HDFEOS5
+
+    Quick Setup (Using Autoconf files)
+    ----------------------------------
+
+    1)  Navigate to the top-level toolkit directory which containts the
+	full toolkit directory structure
+
+	  cd <path/to/toolkit>/TOOLKIT
+
+    3)  Set a few enviroment variables that the congiure do no set and you need to
+        set for your platform
+
+	setenv CFLAG "-myExtarFlag"
+	setenv CPPFLAG "-myExtarFlag"
+	etc.
+
+    3)  Run configure with all the necessary libraries
+
+	  ./configure \
+	  --enable-fortran \
+	  --with-hdf4=</path/to/hdf4/source/directory> \
+	  --with-hdf5=</path/to/hdf5/source/directory> \
+	  --with-szlib=</path/to/szip/source/directory> \
+	  --with-zlib=</path/to/zlib/source/directory> \
+	  --with-jpeg=</path/to/jpeg/source/directory> \
+	  --with-hdfeos2=</path/to/hdfeos/source/directory> \
+	  --with-hdfeos5=</path/to/hdfeos5/source/directory>
+
+	*if you do not want to compile to fortran code of the toolkit, be
+	sure to remove the --enbable-fortran flag before running configure.
+	
+	**for those running Solaris architectures, you may encounter errors
+	with the contents of the message/ directory due to the environment
+	variable PGSINC not being set. To fix this, you must declare the 
+	PGSINC variable by typing setenv PGSINC ../include on your command
+	prompt. It should look like this:
+
+	  setenv PGSINC ../include
+
+	For more details, look under Solaris-PGSINC under Toolkit Installation
+	Section.
+
+
+
+    4)  Run make first. After its completion run make install
+
+	  make
+	  make install
+
+    5)  After installation is complete, clean out folder by running make
+	distclean
+
+	  make distclean
+
+    Toolkit Installation Section
+    ----------------------------
+	Before you begin to configure/build the SDP Toolkit, you must be sure
+	that you already have the packages listed above that are needed to 
+	compile. These packages must all be compatiable with the
+	architecture you are about to install the toolkit onto as well, or
+	otherwise you will recieve several compiler errors. 
+	
+	  ./configure \
+	  --with-hdf4=</path/to/hdf4/source/directory> \
+	  --with-hdf5=</path/to/hdf5/source/directory> \
+	  --with-szlib=</path/to/szip/source/directory> \
+	  --with-zlib=</path/to/zlib/source/directory> \
+	  --with-jpeg=</path/to/jpeg/source/directory> \
+	  --with-hdfeos2=</path/to/hdfeos/source/directory> \
+	  --with-hdfeos5=</path/to/hdfeos5/source/directory>
+
+	You can also edit and run bash on $(srcdir)/doc/AUTOCONF_INSTALL.sh to
+	more easily accomplish this task. Make sure to fill out the path names
+	correctly or configure will complain.
+
+	Fortran
+	-------
+	By default, the fortran code of the toolkit will not be compiled. If
+	you do want to compile the fortran code as well, you must be sure to
+	have a fortran compiler in your current architecture. Add the 
+	--enable-fortran flag as well to tell configure to include the
+	fortran code.
+
+	  --enable-fortran
+
+	32/64-bit architectures
+	-----------------------
+	Several architectures today can support both 64-bit and 32-bit
+	software such as some Linux and Macintel machines. By default,
+	configure will compile and create 64-bit libraries. However, if you
+	would like to create the libraries in 32-bit on these machines, you
+	must include the --enable-32-bit flag. This flag will more simply
+	tell the compiler to include the -m32 flag during compilation.
+
+	  --enable-32-bit
+
+	Debug flag
+	----------
+	Users have the option to have debug when they compile the toolkit. The
+	toolkit will be optimized without the debug feature by default. If the
+	user would like to include debug, the --enable-debug flag can be added
+	to turn the feature on. This simply includes the -g flag to the
+	compiler during the build.
+
+	  --enable-debug
+
+	AA Libraries
+	------------
+	The user has the option of whether or not they want to install the
+	libraries for the AA tools. Configure will not build the AA files 
+	unless told so by using the --with-aa flag. You, however, must have
+	the necessary files/libraries in order to compile the AA libraries or
+	otherwise you will recieve an error during the build.
+
+	  --with-aa
+
+	Prefix
+	------
+	By default, the toolkit will be built in the source directory. The
+	directory has already predefined folder for particular architectures.
+	However, if you would like to have the toolkit built elsewhere, use
+	the --prefix flag to specify the new location
+	the toolkit should be built upon. The approiate bin and lib folders
+	will be created during the make install operation. However, the
+	include directory will not be built, so this must be copied over
+	manually at the moment.
+
+	  --prefix=</new/directory/path>
+
+	Running configure will check your files for the necessary libraries
+	headers that required in order to compile the toolkit. If configure 
+	cannot detect a particular library, it will stop the configure 
+	process and you will not be able to continue. (This could be because 
+	the particular library wasn't fully installed when you compiled the 
+	package.) Simply, make sure that your packages have their complete
+	libraries and run configure again.
+
+	**For people who want to install using scripts**
+	The autotools configure file will rename all the current makefiles 
+	in the source directory from makefile to makefile_org. This was done 
+	to prevent conflict when make and make install were run. If you want 
+	to run the scripts in the future, you must go through the source 
+	directories and rename the makefile_org back to their original names 
+	(makefile)!
+
+	Solaris-PGSINC
+	--------------
+	Currently, for some Solaris users, the files contained in the message
+	directory cannot be compiled to produce the necessary due to an error
+	with the export command within the Makefile. For now, these users must
+	manually set the PGSINC environment variable themselves in order for 
+	the necessary headers to be built for the toolkit. To do this, you must
+	edit the Makefile file within the message directory. Once there,
+	remove this line of code:
+
+	  export PGSINC
+
+	This is done to prevent make from spitting an error from the export 
+	command. Set the PGSINC value before you run make to build the 
+	toolkit. It should look something like this:
+
+	  setenv PGSINC ../include
+
+	The PGSINC value will always be ../include unless indicated otherwise.
+	This will have to be done until a solution is found with the export
+	command in Solaris architectures. Refer to the Notes for developer
+	notes on the error.
+	
+	Once configure has completly finished, simply run make and make 
+	install to compile and install the toolkit onto your computer
+
+	  make
+	  make install
+
+	The SDP Toolkit will install all of it's libraries and utilities 
+	within the source directory. To find the libraries, you must go into 
+	the lib directory and cd into the architecture you installed the 
+	toolkit on. There you will find the library files. For the 
+	utilities, go into the bin directory from the source directory and 
+	find your particular architecture. All the header files can be found 
+	in the include directory.
+
+	  $(top_srcdir)/
+		include/
+	  	bin/
+			linux32/
+			linux64/
+			sun5.10/
+			(etc)/
+		lib/
+			linux32/
+			linux64/
+			sun5.10/
+			(etc)/
+
+    Cleanup
+    -------
+	After compiling the toolkit, be sure to run make distclean to clean 
+	out all unnecessary files and free up space. This will also prevent 
+	errors in the future when you install the toolkit on another 
+	architecture.
+
+	  make distclean
+
+
+Notes
+=====
+
+    Autotools
+    ---------
+	Autotools are tools that can be used by a programmer to create software
+	that is autoconfigurable to any architecture they desire. To do this,
+	you must run several autotool features with configure.ac and the 
+	Makefile.am's so that the correct files can be created. Refer to the
+	autotools manual here 
+	http://www.gnu.org/software/autoconf/manual/autoconf.html for more
+	information.
+
+    configure.ac
+    ------------
+	This file runs all the checks and links all the packages that are 
+	required in order for your software to be built. The file is organized
+	in the following fashion:
+
+	    Autoconf requirements
+	    AC_INIT()
+	    Information on the package
+	    Checks for programs
+	    Checks for libraries
+	    Checks for header files
+	    Checks for types
+	    Checks for structures
+	    Checks for compiler characteristics
+	    Checks for library functions
+	    Checks for system services
+	    AC_CONFIG_FILES()
+	    AC_OUTPUT
+
+	If any new packages need to be linked to the toolkit, this file must
+	be modified to include the libraries/headers of that package so that
+	autotools can link them to your source files when you run autoconf.
+
+    Makefile.am
+    -----------
+	This Makefile must be written like any other Makefile. Autotools
+	allows you to create a simpler Makefile; running automake will link all
+	the packages from configure.ac to all your Makefile.am's. If any new 
+	sources are added to the library, simply open the Makefile.am in the 
+	directory and add the filename in the list of sources for that 
+	particular library (The list should be near the end of the file). If
+	any additional flags need to be added, they should be added before the
+	library is built.
+
+    Running autotools
+    -----------------
+	Once all the necessary files have been created, you must run the
+	autotool features in order to create the necessary files to run make
+	and make install.
+
+	    autoheader
+	    aclocal
+	    autoconf
+	    automake
+
+	Instead of calling all these features, you can simply call autoreconf 
+	to run all the features at once.
+	
+	    autoreconf
+
+	The toolkit also has a reconfigure file in the config directory that
+	you can modify to accomidate your current autotool versions. Once this
+	has been established, you can simply run the shell script.
+
+	    ./config/reconfigure
+
+	Running these features will create the necessary configure and 
+	Makefiles needed to finally run make and build the SDP Toolkit.
+
+    **bin directory scripts
+    -----------------------
+	Several scripts that are required in the bin directory are still
+	unavaiable at the moment. Shell scripts need to be written to link the
+	needed files and place them in the proper directory of the bin folder.
+	This will need to be done soon, for you cannot test the configuration
+	without these files.
+
+    **Testing
+    ---------
+	Despite the fact that the SDP Toolkit was able to compile on several
+	architectures, these compiled versions have not been tested yet due to
+	the missing scripts as mentioned before. Once these files have been
+	resolved, tests should be run to ensure that the toolkit has been 
+	properly built onto the machine.
+
+    message directory header files
+    ------------------------------
+	Currently, the Makefile of the message directory is almost an exact
+	replica of the original makefile used by the scripts. The links have
+	been modified to the correct locations. However, the links are static
+	and any changes made with the /message and /utils/SMF directories
+	should be reflected in this Makefile. Otherwise, first compilation
+	may provide errors.
+
+    Solaris message directory
+    -------------------------
+	At the moment, the Solaris architecture is not able to define its
+	environment variables in the Makefiles during the make process. This
+	becomes an issue when trying to build the needed headers that are built
+	within the message directory. The following code is currently being
+	used to set the PGSINC variable in Makefile.am of the message directory
+	to set this value. This is the only instance any environment variable
+	is set.
+
+	  PGSINC=../include
+	  export PGSINC
+
+	There needs to be a method that can be developed so that this process
+	can work for the Solaris architecture as well. Otherwise, Solaris
+	users must remove this piece of the code from their Makefile and set
+	the PGSINC environment variable themselves.
+
+#END--------------------------------------------------------------------------

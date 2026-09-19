@@ -1,0 +1,1844 @@
+#! /bin/sh
+#-----------------------------------------------------------------------------
+# filename:
+# 	INSTALL-HDF
+#
+# description:
+# 	HDF installation script for the SDP (PGS) Toolkit
+#
+# usage:
+# 	INSTALL-HDF [-f90 [-NAG]] [-ABSOFT] [-fc_path <path/compiler_name>]
+#                   [-cc_path <path/compiler_name>] [-sgi32 | -sgi64] [-no_ftn]
+#                   [-log <log-file> [-append]] [-clean | -cleano] 
+#                   [-strip] [-w_home <file>] [-df <distribution-file>] 
+#                   [-batch] [-install_dir <base installation directory>]
+# 	INSTALL-HDF [-h] 
+#
+# 	  -f90     : build HDF FORTRAN modules using f90 
+# 	             optional flag -NAG specifies NAG f90
+#         -ABSOFT  : flag that specifies absoft f77 is used for fortran compilation
+# 	  -fc_path : set the path of the FORTRAN compiler to <path/compiler_name>
+# 	  -cc_path : set the path of the C compiler to <path/compiler_name>
+# 	  -sgi32   : build in -n32   mode (SGI Power Challenge only)
+# 	  -sgi64   : build in 64-bit mode (SGI Power Challenge only)
+# 	  -dbug    : build in debug mode
+# 	  -log     : sdone session output to new <log-file>
+# 	  -append  : append to existing <log-file>
+# 	  -clean   : run 'make clean' after doing the installation
+# 	  -cleano  : clean up all object and a.out files
+# 	  -strip   : strip out all non-installation files following install
+# 	  -w_home  : write HDF home directory to <file>
+# 	  -df      : install HDF from distribution file <distribution-file>
+# 	  -batch   : run script in batch (i.e. non-interactive) mode
+#         -install_dir : full path to top level directory where HDF will be
+#                        installed (e.g. /usr/local/TOOLKIT/hdf/sgi64)
+#         -no_ftn    do not compile fortran code
+# 	  -h       : display this help message and exit
+#
+# notes:
+# 	1)  The use of the -clean option will cause the HDF utilites to 
+# 	    be deleted.  To preserve them, use the -cleano option instead.
+# 
+# 	2)  The -f90 and -NAG options are  * * NOT IMPLEMENTED  * * 
+# 	    Currently, these options are accepted, but ignored.
+# 	    
+#
+# author:
+#        Mike Sucher / Applied Research Corp.
+#        Megan E. Donovan Spencer / SM&AE
+#        Abe Taaheri / SM&AE
+#        Phuong T. Nguyen / L3 Communication
+#        Adura Adekunjo/ L3 Communication GSI
+#
+# history:
+#       11-May-1995 MES Initial version
+# 	10-Jul-1995 MES Added patch to remove the typedef of _fcd from 
+# 	                hdfi.h if building HDF on a Cray.
+#	17-Jul-1995 MES Configure for IRIX64, the sgi 64 bit O/S.
+# 			- recognize OSTYPE of IRIX64
+# 			- Force all objects to be built in 32-bit mode.
+# 			- Do not not attempt to build basic utilities,
+# 			  because they need a missing 32-bit library.
+#	17-Jul-1995 MES Added a patch to fix file hdf.inc, the broken  
+# 			FORTRAN header file in the HDF3.3r4 release.
+#	02-Aug-1995 MES Patches to make netcdf section build on the cray.
+# 	19-Sep-1995 MES Don't remove tar file unless it was just generated
+# 			by uncompressing the distribution file.
+# 			Recognize the -sgi64 option.
+# 	31-Oct-1995 MES Recognize the -sgi32 option.
+# 			Various tweaks to sgi hanlding.
+# 	01-Nov-1995 MES More tweaks to sgi hanlding.
+# 			Add option handling for -f90, but don't implement yet.
+# 	02-Nov-1995 MES Add -fc_path and -cc_path options, but don't implement.
+# 	06-Nov-1995 MES Fix bug in NCSA-supplied FORTRAN header file: dffunc.inc
+# 	21-Nov-1995 MES Set default installation directory to:
+# 			    `pwd`/hdf/$BRAND
+# 			to facilitate multi-platform installations.
+# 	23-Apr-1996 MES Converted from csh to sh and rewrote to use
+# 			sh features, such as functions.
+# 			Removed version-specific code - it will now 
+# 			go in modules that will allow multiple versions 
+# 			of HDF to be supported, and facilitate maintenance
+# 			of this file.  Currently this script can call
+# 			modules to install either 3.3r4 or 4.0r1p1,
+# 			however only 4.0r1p1 installation will be supported 
+# 			by the Release A version of the SDP Toolkit.
+# 	26-Apr-1996 MES Updated SetArchitecture() to set CC CFLAGS and F77
+# 			for all platforms
+# 	22-Aug-1996 MES Updated to add support for support HDF4.0r2
+# 			- added function UserCompilers to implement the
+# 			  -cc_path and -fc_path options.
+# 			- updated GetDistribution to recognize HDF4.0r2.tar.gz 
+# 			  and HDF4.0r2.tar.Z distribution files.
+# 			- updated UnpackDistribution to support .gz files,
+# 			  assuming the GNU version of zcat is available.
+# 			- added function GnuZcat to attempt to determine
+# 			  if GNU zcat is available.
+# 			- added the -df option so the user may pass in the
+# 			  name of the distribution file (currently defaults
+# 			  to HDF4.0r2.tar.Z).
+# 			- added code to pass the -set_compilers option to 
+# 			  INSTALL-HDF4.0r2 when default compilers must be
+# 			  overridden.
+# 	04-Sep-1996 MES Add the -strip option
+#	15-Apr-1997 DaW Modified flags for Power Challenge.  Added support 
+#			for old 32-bit mode on Power Challenge
+#			But it is not documented because SGI is going to remove
+#			soon.
+#       24-Jun-1998 MEDS Updating script to include new tar file for version
+#                        HDF4.1r1.1 in the distribution list
+#       24-Jul-1999 MEDS Updating script to include new tar file for version
+#                        HDF4.1r3 in the distribution list
+#       04-18-2001 AT  Updataed so that f90 can be used for FORTRAN compiler
+#                       since starting with HDF4.1r2 release f90 is supported
+#       16-Jan-2002 PTN  Updating script to include new tar file for version 
+#                        HDF4.1r5 in the distribution list 
+#       16-Mar-2004 AA   Updating script to include new tar file for version
+#                        HDF4.2r0 in the distribution list.
+#       06-Jul-2005 AA   Updating script to include new tar file for version
+#                        HDF4.2r1 in the distribution list.
+#       06-Jul-2007 AT   Updating script to include new tar file for version
+#                        HDF4.2r2 in the distribution list.
+#       09-Jan-2008 AT   Updating script to include new tar file for version
+#                        HDF4.2r3 in the distribution list.
+#       09-May-2009 AT   Updating script to include new tar file for version
+#                        HDF4.2r4 in the distribution list.
+#       20-Jul-2010 AT   Updating script to include new tar file for version
+#                        hdf-4.2.5 in the distribution list.
+#       16-Nov-2011 AT   Updating script to include new tar file for version
+#                        hdf-4.2.6 in the distribution list.
+#       05-Nov-2013 AT   Updating script to include new tar file for version
+#                        hdf-4.2.9 in the distribution list.
+#       27-Jan-2014 AT   Updating script to include new tar file for version
+#                        hdf-4.2.10 in the distribution list.
+#       14-JUN-2017 AT   Updating script to include new tar file for version
+#                        hdf-4.2.13 in the distribution list.
+#
+#-----------------------------------------------------------------------------
+
+#
+# Save starting directory, path
+# Create error message header
+#
+
+start_dir=`pwd`
+start_path=$PATH
+this_script="`basename $0`"
+script_error="$this_script: Error:"
+
+#
+# Get absolute pathname where this script is located
+# This allows the script to locate any needed auxilliary files
+#
+
+script_dir="`dirname $0`"
+abs="`echo $script_dir | cut -c1`"
+if [ "$abs" != "/" ] ; then
+    script_dir="`cd $script_dir;pwd`"
+fi
+
+
+#****************************************************************
+#                                                               *
+#                   * * * Functions  * * *                      *
+#                                                               *
+#****************************************************************
+
+#
+# Function to output error message
+#
+
+WriteError()
+{
+    echo ""
+    echo "${this_script}: Error: $*"  >&2
+}
+
+
+#
+# Function to output message to logfile and console
+#
+
+EchoAndLog()
+{
+    echo ""
+    echo "$*"
+    if [ "$log_file" != "" ] ; then
+        echo "" >> $log_file
+        echo "$*" >> $log_file
+    fi
+}
+
+#
+# Function to output message to logfile and console
+#
+
+EchoAndLog2()
+{
+    echo "$*"
+    if [ "$log_file" != "" ] ; then
+        echo "$*" >> $log_file
+    fi
+}
+
+
+#
+# Function prompt for user response
+#
+
+UserPrompt()
+{
+    if [ "$BRAND" = "linux" ] || [ "$BRAND" = "linux32" ] || [ "$BRAND" = "linux64" ] ; then
+	/bin/echo "$* \c" > /dev/tty
+    else
+	echo "$* \\c" > /dev/tty
+    fi
+    read user_response
+}
+
+
+#
+# Function to output help message and exit
+#
+
+Help()
+{
+    sed -n '/filename:/,/author:/p' $0 | grep -v "author:" | cut -c3-300 | more
+    #this line must be here because it contains the string: "author:"
+    exit
+}
+
+
+#
+# Function to set up and export the following architecture-specific variables:
+#
+#         BRAND HOST LOGNAME OSTYPE PATH USER
+#
+
+
+SetArchitecture()
+{
+    # set path to a base subset of directories, allowing startup on unknown host
+    # note: once the architecture has been determined the path is customized
+    
+    PATH=/usr/local/bin:/bin:/usr/bin:/etc:/usr/etc:/usr/ucb:/usr/bin/X11
+    
+    
+    # get operating system type, login name
+    # special cases: SCO and Cray  - uname works differently,
+    
+    machine=`uname -m | awk '{print $1}'`	# needed on Cray & SCO
+    temp_ostype=`uname`
+
+    case "$machine" in
+    
+      i386 )        			# SCO box
+    	OSTYPE=sco386
+        ;;
+    
+      CRAY )    				# CRAY
+    	OSTYPE=UNICOS
+        ;;
+    
+      * )					# everybody else
+    	OSTYPE=`uname`
+        ;;
+    
+    esac
+    
+# Intel Macintosh is also i386 or i686 (?) machine
+
+    if [ "$machine" = "i386" ] ; then
+	if [ "$temp_ostype" = "Darwin" ] ; then 
+	    OSTYPE=DarwinIntel
+	fi
+	if [ "`uname | awk -F_ '{print $1}'`" = "CYGWIN" ] ; then 
+	    OSTYPE=Cygwin
+	fi
+    fi
+    if [ "$machine" = "i686" ] ; then
+	if [ "$temp_ostype" = "Darwin" ] ; then 
+	    OSTYPE=DarwinIntel
+	fi
+	if [ "`uname | awk -F_ '{print $1}'`" = "CYGWIN" ] ; then 
+	    OSTYPE=Cygwin
+	fi
+    fi
+    if [ "$machine" = "x86_64" ] || [ "$machine" = "ia64" ] ; then
+	if [ "$temp_ostype" = "Darwin" ] ; then
+ 	    OSTYPE=DarwinIntel
+	    if [ "$MAC_BRAND" = "" ] ; then 
+		echo " Error: In 64-bit MAC platform the env. variable MAC_BRAND must be set to mac32 or mac64 before running this script."
+		exit 1
+	    fi
+	else
+	    if [ "$LINUX_BRAND" = "" ] ; then 
+		echo " Error: In 64-bit linux platform the env. variable LINUX_BRAND must be et to linux32 or linux64 before running this script."
+		exit 1
+	    fi
+	fi
+     fi
+
+    user=`id | cut -d\( -f2 | cut -d\) -f1`
+    if [ "$LOGNAME" = "" ] ; then 		# make sure $LOGNAME is defined
+        LOGNAME=$user	
+    fi
+    USER=$LOGNAME				# make sure $USER is defined
+    
+    
+    # set machine-depdoneent environment variables:
+    # 	HOST  the host name of this machine
+    # 	BRAND used by other achitecture-specific code
+    # 	path  the execution search path exported to PATH
+    
+    case "$OSTYPE" in
+    
+      AIX ) 
+    	PATH=/usr/local/bin:/bin:/usr/bin:/etc:/usr/etc:/usr/ucb:/usr/bin/X11:/usr/ccs/bin:/usr/sbin
+    	HOST=`hostname`
+    	BRAND=ibm
+        CC=cc
+        CFLAGS="-O"
+        F77=xlf
+        ;;
+    
+      HP-UX ) 
+    	PATH=/usr/local/bin:/bin:/usr/bin:/etc:/usr/etc:/usr/bin/X11
+    	HOST=`hostname`
+    	BRAND=hp 
+        CC=cc
+        CFLAGS="-O"
+        F77=fort77
+        ;;
+    
+      IRIX )  
+    	PATH=/usr/local/bin:/bin:/usr/bin:/etc:/usr/etc:/usr/bsd:/usr/bin/X11:/usr/sbin
+    	HOST=`hostname`
+    	BRAND=sgi 
+        CC=cc
+        CFLAGS="-O"
+        F77=f77
+        ;;
+    
+      IRIX64 )  
+        PATH=/usr/local/bin:/bin:/usr/bin:/etc:/usr/etc:/usr/bsd:/usr/bin/X11:/usr/sbin
+        HOST=`hostname`
+        case "$sgi_mode" in
+          32  )  BRAND=sgi   ; CC="cc -32 -mips2"  ; F77="f77 -32 -mips2"  ;;
+          n32 )  BRAND=sgi32 ; CC="cc -n32 -mips3" ; F77="f77 -n32 -mips3"  ;;
+          64  )  BRAND=sgi64 ; CC="cc -64 -mips4"  ; F77="f77 -64 -mips4"  ;;
+          *   )  BRAND=sgi   ; CC="cc"  ; F77="f77"  ;;
+        esac
+        CFLAGS="-O"
+        set_compilers=0		# override HDF default compilers
+        ;;
+    
+      Linux )
+	PATH=/usr/local/bin:/bin:/usr/bin:/etc:/usr/etc:/usr/X11/bin
+	HOST=`hostname -s`
+	BRAND=linux
+	if [ "$LINUX_BRAND" = "linux64" ] ; then
+	    BRAND=linux64
+	elif [ "$LINUX_BRAND" = "linux32" ] ; then
+	    BRAND=linux32
+	fi
+        CC="gcc $LNX_COMP_FLAG"
+        CFLAGS="-O"
+        F77="g77 $LNX_COMP_FLAG" 
+	;;
+
+      Darwin )
+        PATH=/bin:/sbin:/usr/bin:/usr/sbin
+        HOST=`hostname -s`
+        BRAND=macintosh
+        CC=gcc
+        CFLAGS="-O"
+        F77=g77
+        ;;
+
+      DarwinIntel )
+        PATH=/bin:/sbin:/usr/bin:/usr/sbin
+        HOST=`hostname -s`
+        BRAND=macintel32
+	if [ "$MAC_BRAND" = "macintel64" ] ; then
+	    BRAND=macintel64
+	elif [ "$MAC_BRAND" = "macintel32" ] ; then
+	    BRAND=macintel32
+	fi
+        CC="gcc $MACINTEL_COMP_FLAG"
+        CFLAGS="-O2"
+        F77="gfortran $MACINTEL_COMP_FLAG"
+        ;;
+
+      Cygwin )
+        PATH=/bin:/sbin:/usr/bin:/usr/sbin
+        HOST=`hostname`
+        BRAND=cygwin
+        CC=gcc
+        CFLAGS="-O"
+        F77=g77
+        ;;
+
+      OSF1 )  
+    	PATH=/usr/local/bin:/bin:/usr/bin:/etc:/usr/etc:/usr/ucb:/usr/bin/X11:/usr/ccs/bin:/usr/sbin
+    	HOST=`hostname -s`
+    	BRAND=dec 
+        CC=cc
+        CFLAGS="-O -std"
+        F77=f77
+        ;;
+    
+      sco386 ) 
+    	PATH=/usr/local/bin:/bin:/usr/bin:/etc:/usr/etc:/usr/bin/X11
+    	HOST=`hostname -s`
+    	BRAND=sco 
+        CC=cc
+        CFLAGS="-O"
+        F77=f77
+        ;;
+    
+      SunOS ) 
+    	# distinguish between SunOS 5.x and 4.x versions
+    	if [ `uname -r | awk -F. '{print $1}'` = "5" ] ; then
+	    BRAND="sun5"			# release V5.x SunOS
+	    PATH=/usr/local/bin:/opt/SUNWspro/bin:/bin:/usr/ucb:/usr/bin:/etc:/usr/etc:/usr/openwin/bin:/usr/openwin/demo:/usr/ccs/bin:/usr/sbin
+            CC=cc
+            CFLAGS="-O"
+            F77=f77
+	    if [ "`uname -r | awk -F. '{print $1, $2}'`" = "5 10" ] ; then
+		BRAND="sun5.10"			# release V510 SunOS
+		PATH=/usr/local/bin:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/bin:/usr/bin:/etc:/usr/openwin/bin:/usr/openwin/demo:/usr/sbin
+		CC=cc
+		CFLAGS="-O"
+		F77=f77
+	    elif [ "`uname -r | awk -F. '{print $1, $2}'`" = "5 9" ] ; then
+		BRAND="sun5.9"			# release V5.9 SunOS
+		PATH=/usr/local/bin:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/bin:/usr/bin:/etc:/usr/openwin/bin:/usr/openwin/demo:/usr/sbin
+		CC=cc
+		CFLAGS="-O"
+		F77=f77
+	    elif [ "`uname -r | awk -F. '{print $1, $2}'`" = "5 8" ] ; then
+		BRAND="sun5.8"			# release V5.8 SunOS
+		PATH=/usr/local/bin:/opt/SUNWspro/bin:/usr/ucb:/bin:/usr/bin:/etc:/usr/openwin/bin:/usr/openwin/demo:/usr/ccs/bin:/usr/sbin
+		CC=cc
+		CFLAGS="-O"
+		F77=f77
+	    fi
+    	else
+    	    BRAND="sun4"			# release V4 SunOS
+    	    PATH=/usr/local/bin:/opt/SUNWspro/bin:/bin:/usr/bin:/etc:/
+    	    PATH=/usr/local/bin:/usr/local/lang:/usr/lang:/usr/ucb:/bin:/usr/bin:/etc:/usr/etc:/usr/openwin/bin:/usr/openwin/demo
+            CC=acc
+            CFLAGS="-O"
+            F77=f77
+            set_compilers=1		# override HDF4.0r2 default compilers
+    	fi
+    	HOST=`hostname`
+        ;;
+    
+      UNICOS ) 
+    	PATH=/usr/local/bin:/bin:/usr/bin:/etc:/usr/ucb:/usr/bin/X11
+    	HOST=`hostname`
+    	BRAND=cray 
+        CC=cc
+        CFLAGS="-O"
+        F77=cf77
+        ;;
+    
+      * )
+    	echo "Operating system: $OSTYPE not supported" 	>&2
+    	echo "This release of the Toolkit supports: " 	>&2
+    	echo "   Sun, SGI HP-9000 IBM-6000 DEC-Alpha and Cray/Unicos " 	>&2
+        exit 1
+        ;;
+    
+    esac
+
+
+    # if debug version was requested replace -O with -g in CFLAGS
+
+    if [ "$dbug" = "1" ] ; then
+	CFLAGS=`echo $CFLAGS | sed 's/-O/-g/'`
+    fi
+
+    CFLAGS="$CFLAGS $EXT_CC_FLAGS"
+
+    # export the architecture-specific variables
+
+    export BRAND HOST LOGNAME OSTYPE PATH USER
+    export CC CFLAGS F77
+    
+}
+
+
+#
+# Function to allow user to override the defaults for the compilers
+# The following variables are affected:
+#
+#         PATH CC F77
+#
+
+UserCompilers()
+{
+    #
+    # check to see if valid C compiler path was specified
+    #
+    
+    cc=""
+    
+    if [ "$cc_path" != ""  ] ; then
+    
+        if [ -f $cc_path ] ; then
+    
+            cc=`basename $cc_path`
+            cc_path=`echo $cc_path | sed 's%/[^/]*/*$%%'`
+	    case "$BRAND" in
+		"sgi32" )
+		    CC="$cc_path/$cc -n32"
+		;;
+
+		"sgi64" )
+		    cpu_type=`hinv | fgrep CPU | head -1 | cut -d' ' -f3 | cut -b2`
+		    if [ "$cpu_type" == "4" ] ; then
+			CC="$cc_path/$cc -64 -mips3"
+		    else
+			CC="$cc_path/$cc -64 -mips4"
+		    fi
+		;;
+
+		"linux" )
+		    CC="$cc_path/$cc $LNX_COMP_FLAG"
+		;; 
+
+		"linux32" )
+		    CC="$cc_path/$cc $LNX_COMP_FLAG"
+		;; 
+
+		"linux64" )
+		    CC="$cc_path/$cc $LNX_COMP_FLAG"
+		;; 
+
+		"macintel" )
+		    CC="$cc_path/$cc $MACINTEL_COMP_FLAG"
+		;;
+
+		"macintel32" )
+		    CC="$cc_path/$cc $MACINTEL_COMP_FLAG"
+		;; 
+
+		"macintel64" )
+		    CC="$cc_path/$cc $MACINTEL_COMP_FLAG"
+		;; 
+
+		* )
+		    CC="$cc_path/$cc"
+		;; 
+	    esac
+
+	    export CC		# user overrides C compiler name
+	    set_compilers=1		# override HDF default compilers
+    
+	fi
+    
+        if [ -d $cc_path ] ; then	# make sure cc_path is now a directory
+    
+            PATH=${cc_path}:${PATH} 	# prepend cc_path to search path
+            export PATH
+    
+        else
+    
+            cc_path=""
+            echo "Warning: C compiler directory $cc_path not found."
+            echo  "HDF build may fail."
+    
+        fi
+    
+    fi
+    
+    
+    #
+    # check to see if valid FORTRAN compiler path was specified
+    #
+    
+    fc=""
+    
+    if [ "$fc_path" != "" ] ; then
+    
+        if [ -f $fc_path ] ; then
+    
+            fc=`basename $fc_path`
+            fc_path=`echo $fc_path | sed 's%/[^/]*$%%'`
+	    case "$BRAND" in
+		"sgi32" )
+		    F77="$fc_path/$fc -n32"
+		;;
+
+		"sgi64" )
+		    cpu_type=`hinv | fgrep CPU | head -1 | cut -d' ' -f3 | cut -b2`
+		    if [ "$cpu_type" == "4" ] ; then
+			F77="$fc_path/$fc -64 -mips3"
+		    else
+			F77="$fc_path/$fc -64 -mips4"
+		    fi
+		;;
+
+		"linux" )
+		    if [ "$fc" == "pgf90" ] || [ "$fc" == "pgf77" ] ; then
+			F77="$fc_path/$fc"
+		    else
+			F77="$fc_path/$fc $LNX_COMP_FLAG"
+		    fi
+		;; 
+
+		"linux32" )
+		    if [ "$fc" == "pgf90" ] || [ "$fc" == "pgf77" ] ; then
+			F77="$fc_path/$fc"
+		    else
+			F77="$fc_path/$fc $LNX_COMP_FLAG"
+		    fi
+		;; 
+
+		"linux64" )
+		    if [ "$fc" == "pgf90" ] || [ "$fc" == "pgf77" ] ; then
+			F77="$fc_path/$fc"
+		    else
+			F77="$fc_path/$fc $LNX_COMP_FLAG"
+		    fi
+		;; 
+
+		"macintel" )
+		    F77="$fc_path/$fc $MACINTEL_COMP_FLAG"
+		;;
+
+		"macintel32" )
+		    F77="$fc_path/$fc $MACINTEL_COMP_FLAG"
+		;;
+
+		"macintel64" )
+		    F77="$fc_path/$fc $MACINTEL_COMP_FLAG"
+		;;
+
+		* )
+		    F77="$fc_path/$fc" 
+		;; 
+	    esac
+
+    #        if [ "$fc" != f90 ] ; then	# (f90 not supported for HDF4.1r1)
+    # f90 is supported starting with the HDF4.1r2 release
+                export F77	# user overrides FORTRAN compiler name
+                set_compilers=1		# override HDF default compilers
+    #        fi
+    
+        fi
+    
+        if [ -d $fc_path ] ; then	# make sure fc_path is now a directory
+    
+            PATH=${fc_path}:${PATH} 	# prepend fc_path to search path
+            export PATH
+    
+        else
+    
+            fc_path=""
+            echo "Warning: FORTRAN directory $fc_path not found."
+            echo  "HDF build may fail."
+    
+        fi
+    
+    fi
+    
+}
+
+
+
+#
+# Function to get the location of the distribution file
+#
+    
+GetDistribution()
+{    
+    : ${distrib_file:=hdf-4.2.13.tar.gz}
+
+    ds1=$distrib_file			# backup copy
+    
+    # derive tar file name
+
+    case "$distrib_file" in
+
+ 
+      4.1r3_aix.tar )
+        tar_file=4.1r3_aix.tar
+        hdf_home=4.1r3_aix
+        ;;
+
+      HDF3.3r4.tar.Z ) 
+        tar_file=HDF3.3r4.tar
+        hdf_home=HDF3.3r4 
+        ;;
+
+      HDF4.1r1.tar.gz  )
+        tar_file=HDF4.1r1.tar
+        hdf_home=HDF4.1r1
+        ;;
+
+      HDF4.1r1.tar.Z  )
+        tar_file=HDF4.1r1.tar
+        hdf_home=HDF4.1r1
+        ;;
+
+      HDF4.1r1.1.tar.Z  )
+        tar_file=HDF4.1r1.1.tar
+        hdf_home=HDF4.1r1
+        ;;
+
+      HDF4.1r3.tar.Z  )
+        tar_file=HDF4.1r3.tar
+        hdf_home=HDF4.1r3
+        ;;
+
+      hdf4.1r4.tar.Z  )
+        tar_file=hdf4.1r4.tar.Z
+        hdf_home=hdf4.1r4
+        ;;
+
+      HDF4.1r5.tar.Z  )
+        tar_file=HDF4.1r5.tar
+        hdf_home=HDF4.1r5
+        ;;
+
+      HDF4.2r0.tar.Z  )
+       tar_file=HDF4.2r0.tar
+       hdf_home=HDF4.2r0
+       ;;
+
+      HDF4.2r1.tar.Z  )
+       tar_file=HDF4.2r1.tar
+       hdf_home=HDF4.2r1
+       ;;
+
+      HDF4.2r2.tar.gz  )
+       tar_file=HDF4.2r2.tar
+       hdf_home=HDF4.2r2
+       ;;
+
+      HDF4.2r3.tar.gz  )
+       tar_file=HDF4.2r3.tar
+       hdf_home=HDF4.2r3
+       ;;
+
+      HDF4.2r4.tar.gz  )
+       tar_file=HDF4.2r4.tar
+       hdf_home=HDF4.2r4
+       ;;
+
+      hdf-4.2.5.tar.gz  )
+       tar_file=hdf-4.2.5.tar
+       hdf_home=hdf-4.2.5
+       ;;
+
+      hdf-4.2.6.tar.gz  )
+       tar_file=hdf-4.2.6.tar
+       hdf_home=hdf-4.2.6
+       ;;
+
+      hdf-4.2.9.tar.gz  )
+       tar_file=hdf-4.2.9.tar
+       hdf_home=hdf-4.2.9
+       ;;
+
+      hdf-4.2.10.tar.gz  )
+       tar_file=hdf-4.2.10.tar
+       hdf_home=hdf-4.2.10
+       ;;
+
+      hdf-4.2.11.tar.gz  )
+       tar_file=hdf-4.2.11.tar
+       hdf_home=hdf-4.2.11
+       ;;
+
+      hdf-4.2.13.tar.gz  )
+       tar_file=hdf-4.2.13.tar
+       hdf_home=hdf-4.2.13
+       ;;
+
+      HDF4.0r2.tar.gz  )
+        tar_file=HDF4.0r2.tar
+        hdf_home=HDF4.0r2
+        ;;
+
+      HDF4.0r2.tar.Z  )
+        tar_file=HDF4.0r2.tar
+        hdf_home=HDF4.0r2
+        ;;
+
+      HDF4.0r1p1.tar.Z  )
+        tar_file=HDF4.0r1p1.tar
+        hdf_home=40r1p1_patchedsrc 
+        ;;
+
+      40r1p1_patchedsrc.tar.Z  )
+        tar_file=40r1p1_patchedsrc.tar
+        hdf_home=40r1p1_patchedsrc 
+        ;;
+
+      * )
+        EchoAndLog "HDF version in $distrib_file not supported by this script."
+        exit 1
+        ;;
+
+    esac
+
+    
+    # set search path to include current dir, parent of current and $HOME    
+    search_path=`pwd`
+    search_path="$search_path `cd ..; pwd` $HOME"
+
+    # set search file to include compressed tar file and uncompressed tar file
+    search_file="$distrib_file $tar_file"
+
+    # search for the distribution file
+
+    found_file=0
+    for distrib_path in $search_path ; do
+
+        for distrib_file in $search_file ; do
+
+            if [ -f ${distrib_path}/${distrib_file} ] ; then
+                found_file=1
+                break
+            fi
+
+        done
+
+        if [ $found_file = 1 ] ; then
+            break
+        fi
+
+    done
+
+    # if file was not found, ask the user
+
+    if [ $found_file = 0 ] ; then
+
+	if [ $batch_mode = 0 ] ; then
+	    echo ""	
+	    UserPrompt "Pathname where $ds1 is located: "
+	    echo ""
+  	else
+	    user_response=""
+	fi
+    
+        if [ "$user_response" != "" ] ; then
+
+            # make sure directory exists
+
+            if [ -d $user_response ] ; then
+                distrib_path=$user_response
+            else 
+                WriteError "Invalid directory: $user_response"
+                exit 1
+            fi
+    
+            # search for the distribution file in user directory
+
+            for distrib_file in $search_file ; do
+
+                if [ -f ${distrib_path}/${distrib_file} ] ; then
+                    found_file=1
+                    break
+                fi
+
+            done
+
+        fi
+
+
+    fi
+
+
+    if [ $found_file = 0 ] ; then
+        WriteError "Can't find ${ds1} in (${search_path})"
+        echo "HDF installation cancelled."
+        exit 1
+    fi
+
+}
+
+
+# 
+# Function to get the location of the HDF home directory for installation
+# Also, prompt user that all information is valid before proceeding
+#
+
+GetInstallDir()
+{
+    default_HDF_path="`pwd`/hdf/$BRAND"
+
+    if [ "$HDF_path" = "" ] ; then
+	HDF_path="`pwd`/hdf/$BRAND"
+    fi
+
+    # ask the user
+
+    if [ $batch_mode = 0 ] ; then
+	UserPrompt "Pathname where directory '$hdf_home' will be created [$HDF_path]: " 
+	echo ""
+    else
+	user_response=""
+    fi
+    
+    if [ "$user_response" = "" ] ; then
+        if [  ! -d `dirname $HDF_path`  ] ; then mkdir `dirname $HDF_path` ; fi
+        if [  ! -d $HDF_path  ] ; then  mkdir $HDF_path ; fi
+    else
+        if [ -d "$user_response" ] ; then HDF_path=$user_response ; fi
+    fi
+    
+    if [ ! -d $HDF_path ] ; then
+	if [ $batch_mode = 0 ] ; then
+	    UserPrompt "$HDF_path does not exist.  Create [y]? "
+	else
+	    user_response=y
+	fi
+	if [ "$user_response" = "" ] ; then user_response="y" ; fi
+	case "$user_response" in
+	    y* | Y* )
+		mkdir -p $HDF_path
+		if [ ! -d $HDF_path ] ; then
+		    WriteError "Unable to create directory $HDF_path." 
+		    echo "HDF installation cancelled." 2>&1
+		    exit 1
+		
+		fi
+		;;
+	    *)
+		WriteError "Directory $HDF_path does not exist." 
+		echo "HDF installation cancelled." 2>&1
+		exit 1
+		;;
+        esac
+    fi
+    
+
+   #
+   # confirm Configuration with SZIP  before proceeding
+   #
+
+    # ask the user
+
+    if [ $batch_mode = 0 ] ; then
+	EchoAndLog2 "Note:"
+	EchoAndLog2 "If you configure HDF4 with szip you may need to add szip"
+	EchoAndLog2 "library to your application makefiles that use HDF4. If"
+	EchoAndLog2 "you do not configure HDF4 with szip you will not be able"
+	EchoAndLog2 "to use HDF4's SZIP compression encoding or decoding (or"
+	EchoAndLog2 "both) capabilties for HDF4 files, and you may not be able"
+	EchoAndLog2 "to read HDF files that has szip compressed fields."
+	UserPrompt "Do you wish to configure HDF4 with SZIP[y]: "
+	echo ""
+    else
+	user_response=y
+    fi
+    case "$user_response" in
+	n* | N* )
+	    EchoAndLog "---- HDF4 will be configured without SZIP.----"
+	    CONFIG_HDF4_WITH_SZIP="0"
+	    ;;
+	*)
+	    EchoAndLog "---- HDF4 will be configured with SZIP.----"
+	    CONFIG_HDF4_WITH_SZIP="1"
+	    ;;
+    esac
+    export CONFIG_HDF4_WITH_SZIP	
+
+    #
+    # confirm before proceeding
+    #
+    
+    echo "The HDF directory will be restored from: " 
+    echo "    ${distrib_path}/${distrib_file}" 
+    echo "" 
+    echo "The HDF directory will be created in: " 
+    echo "     ${HDF_path}" 
+    echo "" 
+
+    if [ $batch_mode = 0 ] ; then
+	UserPrompt "Continue [yes] ? " 
+	case "$user_response" in
+	    n* | N* ) echo "Cancelled." ; exit 1 ;;
+	    * ) echo "Confirmed." ; echo "" ;;
+	esac
+    fi
+
+#
+# For linux create soft links if default HDF installation directory is used
+#
+    save_dir="`pwd`"
+    if [ "`pwd`/hdf/$BRAND" = "$default_HDF_path" ] ;then
+	if [ "$BRAND" = "linux64" ] ; then
+	    cd ${default_HDF_path}/..
+	    current_path="`pwd`"
+	    EchoAndLog "64-bit structure is the default in this machine. Creating $current_path/linux as a soft link to $default_HDF_path"
+	    ln -s ./linux64 linux
+ 	    cd $save_dir
+	fi
+
+	if [ "$BRAND" = "linux" ] ; then
+	    cd ${default_HDF_path}/..
+	    current_path="`pwd`"
+	    EchoAndLog "32-bit structure is the default in this machine. Creating $current_path/linux32 as a soft link to $default_HDF_path"
+	    ln -s ./linux linux32
+ 	    cd $save_dir
+	fi
+    fi
+
+#
+# For macintel create soft links if default HDF installation directory is used
+#
+    save_dir="`pwd`"
+    if [ "`pwd`/hdf/$BRAND" = "$default_HDF_path" ] ;then
+	if [ "$BRAND" = "macintel32" ] ; then
+	    cd ${default_HDF_path}/..
+	    current_path="`pwd`"
+	    EchoAndLog "macintel32 directories will be soft linked to macintel. Creating $current_path/macintel as a soft link to $default_HDF_path"
+	    ln -s ./macintel32 macintel
+ 	    cd $save_dir
+	fi
+
+	if [ "$BRAND" = "macintel" ] ; then
+	    cd ${default_HDF_path}/..
+	    current_path="`pwd`"
+	    EchoAndLog "macintel32 directories will be soft linked to macintel. Creating $current_path/macintel32 as a soft link to $default_HDF_path"
+	    ln -s ./macintel macintel32
+ 	    cd $save_dir
+	fi
+    fi
+}
+
+
+#
+# Function to unpack the distribution file into the installation directory
+#
+
+UnpackDistribution()
+{
+    #
+    # Go to the HDF parent directory
+    #
+    
+    cd $HDF_path
+
+    #
+    # If the new HDF home directory already exits, it must
+    # be removed first.  Check with the user before proceeding.
+    #
+    
+    if [ -d "$hdf_home" ] ; then
+    
+        EchoAndLog "The directory $hdf_home already exists."
+	if [ $batch_mode = 0 ] ; then
+	    UserPrompt "Replace it [no] ? "
+	else
+	    user_response=y
+	fi
+
+        case "$user_response" in
+          y* | Y* )
+            EchoAndLog "Removing old $hdf_home directory ..."
+            /bin/rm -rf $hdf_home
+            ;;
+    
+          * )
+            EchoAndLog "Cancelled."
+            exit 1
+            ;;
+        esac
+    
+    fi
+    
+    
+    #
+    # Create a link to the distribution file, if necessary.
+    #
+
+    link_flag=0
+    if [ ! -f $distrib_file ] ; then
+        if [ -f ${distrib_path}/${distrib_file} ] ; then
+            ln -s ${distrib_path}/${distrib_file} ${distrib_file}
+            link_flag=1
+        fi
+    fi
+    
+    # 
+    # Uncompress the distribution file, (if needed), and extract the files
+    # 
+    
+    EchoAndLog "Extracting files from $distrib_file ..."
+
+    suffix="`echo $distrib_file |  sed 's/^.*\.//'`"
+    case $suffix in
+    
+      Z  )
+        zcat $distrib_file | tar xvf - 
+        echo ""
+        ;;
+
+      gz )
+	gzip -cd $distrib_file | tar xvf - | awk '{printf "."}' 2>&1
+#        GnuZcat
+#        if [ $gnu_zcat != 1 ] ; then
+#            WriteError "You need the GNU version of zcat to unpack this file."
+#            exit 1
+#        fi
+#        zcat $distrib_file | tar xvf - | awk '{printf "."}' 2>&1
+        echo ""
+        ;;
+
+      tar)
+	echo $distrib_file
+        tar -xvf $distrib_file | awk '{printf "."}' 2>&1
+	echo ""
+        ;;
+    
+    esac
+
+    #
+    # Clean up symbolic link, if present
+    #
+
+    if [ $link_flag = 1 ] ; then
+        /bin/rm -f $distrib_file
+    fi
+
+
+}
+
+
+#
+# See if zcat is GNU version
+#
+
+GnuZcat()
+{
+    if [ "$1" = "" ] ; then
+        zcat_cmd=zcat
+    else
+        zcat_cmd=$1
+    fi
+    
+    buf=`exec 2>&1; $zcat_cmd < /dev/null | tail -1` 
+    buf=`echo $buf | awk -F: '{print $1}'`
+    
+    case "$buf" in
+      zcat) gnu_zcat=1 ;;
+      *   ) gnu_zcat=0 ;;
+    esac
+}
+
+
+#
+# Strip all HDF distribution files not needed after installation.
+#
+
+StripHdfInstall()
+{
+    cd $HDFHOME
+
+    here=`pwd`
+    here=`basename $here`
+
+    #
+    # Make sure this is a valid HDF directory befor clobbering files !
+    # 
+
+    if [ "`echo $here | grep '^HDF'`" = "" ] ; then
+    
+        EchoAndLog "Not a valid HDF directory: no files removed."
+        
+    else
+
+        EchoAndLog "Removing all non-installation HDF files ..."
+
+        for file in * ; do
+
+            if [ -d "$file" ] ; then
+    
+                case "$file" in 
+        
+                  bin | lib | include | man ) ;;
+                  * ) rm -rf $file ;;
+              
+                esac
+        
+            else
+    
+                rm -f $file
+        
+            fi
+    
+        done
+        
+    fi
+}
+
+
+#****************************************************************
+#                                                               *
+#                  * * * Main Program  * * *                    *
+#                                                               *
+#****************************************************************
+
+
+
+#
+# Get arguments from command line
+#
+
+log_file=""
+home_file=""
+noquery=0
+clean=0
+cleano=0
+strip_install=0
+append=0
+no_untar=0
+sgi_mode=32
+f90_flag=0
+nag_flag=0
+absoft_flag=0
+fc_path=""
+cc_path=""
+distrib_file=""
+set_compilers=0
+dbug=0
+HDF_path=""
+batch_mode=0
+build_ftn=""
+
+while [ "$1" != "" ] ; do 
+
+    case "$1" in
+
+      -h )
+        Help
+        ;;
+
+      -f90 )
+        f90_flag=1
+        ;;
+
+      -NAG )
+        if [  $f90_flag = 0  ] ; then
+            WriteError "Must first specify -f90 and set compiler path."
+            Help
+        else
+            nag_flag=1
+        fi
+        ;;
+
+
+       -ABSOFT )
+	    absoft_flag=1
+	;;
+
+      -fc_path )
+        fc_path="$2"
+        shift
+        ;;
+
+      -cc_path )
+        cc_path="$2"
+        shift
+        ;;
+
+      -df)
+        distrib_file="$2"
+        shift
+        ;;
+
+      -sgi32 )
+        sgi_mode=n32
+        ;;
+
+      -sgi64 )
+        sgi_mode=64
+        ;;
+
+      -log )
+        if [ "$2" != "" ] ; then
+            if [ "` echo $2 | cut -c1`" = "/" ] ; then
+                log_file="$2"
+            else
+                log_file="$start_dir/$2"
+            fi
+            shift
+        else
+            WriteError "A log file must be specified with the -log option."
+            Help
+        fi
+        ;;
+
+      -append )
+        append=1
+        ;;
+
+      -w_home )
+        if [ "$2" != "" ] ; then
+            if [ "` echo $2 | cut -c1`" = "/" ] ; then
+                home_file="$2"
+            else
+                home_file="$start_dir/$2"
+            fi
+            shift
+        else
+            WriteError "No file specified with -w_home switch."
+            Help
+        fi
+        ;;
+
+      -nq | -noquery )
+        noquery=1
+        ;;
+
+      -clean )
+        clean=1
+        ;;
+
+      -cleano )
+        cleano=1
+        ;;
+
+      -strip )
+        strip_install=1
+        ;;
+
+      -no_untar )
+        no_untar=1
+        ;;
+
+      -dbug )
+        dbug=1
+        ;;
+
+       -no_ftn )
+	    build_ftn=-no_ftn
+	;;
+
+      -install_dir )
+        if [ "$2" != "" ] ; then
+	    HDF_path=$2
+            shift
+        else
+            WriteError "No installation directory specified with -install_dir switch."
+            Help
+        fi
+        ;;
+
+	-batch )
+	    batch_mode=1
+	;;
+
+      * )
+        echo "$script_error invalid argument '$1'"
+        Help
+        ;;
+
+    esac
+
+    shift
+
+done
+
+
+#
+# Inititialize log file
+#
+
+if [ "$log_file" != "" ] ; then
+
+    if [ "$append" = "0" ] ; then
+        if [ -f "$log_file" ] ; then 
+            /bin/rm  -f $log_file > /dev/null 2>&1
+        fi
+    fi
+
+    touch $log_file > /dev/null 2>&1
+    if [ $? != 0 ] ; then
+        WriteError "Cannot write to file $log_file"
+        exit 1
+    fi
+
+    echo ""
+    echo "`basename $0`: session output will go to file: "
+    echo ""
+    echo "     $log_file"
+    echo ""
+
+fi
+
+export log_file
+
+#
+# Initialize the home file
+#
+
+if [ "$home_file" != "" ] ; then
+
+    if [ -f "$home_file" ] ; then 
+        /bin/rm -f $home_file > /dev/null 2>&1
+    fi
+
+    touch $home_file > /dev/null 2>&1
+    if [ $? != 0 ] ; then
+        WriteError "Cannot write to file $home_file"
+        exit 1
+    fi
+
+fi
+
+
+#
+# Set architecture-specific variables
+#
+
+SetArchitecture
+
+
+#
+# Set user compiler overrides
+#
+
+UserCompilers
+
+
+#
+# Get the location of the distribution file
+#
+
+GetDistribution
+
+
+#
+# Got valid distribution file
+# Get the location of the HDF home directory for installation
+#
+
+GetInstallDir
+
+
+#
+# Write the log file header
+#
+
+if [ "$log_file" != "" ] ; then
+    echo "------------------------------------------------------------" >> $log_file
+    echo "" >> $log_file
+    echo "HDF installation starting at: `date`" >> $log_file
+    echo "host: $HOST    type: $BRAND     user: $USER " >> $log_file
+    echo "" >> $log_file
+    echo "" >> $log_file
+    echo "The HDF directory will be restored from: " >> $log_file
+    echo "    ${distrib_path}/${distrib_file}" >> $log_file
+    echo "" >> $log_file
+    echo "The HDF directory will be created in: " >> $log_file
+    echo "     ${HDF_path}" >> $log_file
+    echo "" >> $log_file
+    echo "------------------------------------------------------------" >> $log_file
+    echo "" >> $log_file
+    echo "" >> $log_file
+fi
+
+
+#
+# Unpack the distribution file into the installation directory
+#
+
+    cd $HDF_path
+
+    if [ "$no_untar" = 0 ] ; then
+        UnpackDistribution
+    fi
+
+
+#
+# Prepare to install the requested version of HDF
+#
+
+if [ ! -d $hdf_home ] ; then
+    EchoAndLog "Error creating directory: $hdf_home"
+    exit 1
+fi
+
+cd $hdf_home				# go to the starting directory
+
+hdf_install_caller="$this_script"	# set caller flag for sub-modules
+export hdf_install_caller
+
+
+#
+# Set the version to be installed
+#
+
+install_script=""
+install_options="$build_ftn"
+
+case $hdf_home in
+
+  HDF3.3r4 )				# HDF 3.3 release 4
+    HDFHOME=${HDF_path}/${hdf_home} ; export HDFHOME 
+    install_script="$script_dir/INSTALL-HDF3.3r4"
+    ;;
+
+  HDF4.0r1p1 | 40r1p1_patchedsrc ) 	# HDF 4.0 release 1, patch level 1
+
+    HDFHOME=${HDF_path}/HDF4.0r1p1 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.0r1p1"
+    ;;
+
+  HDF4.0r2 ) 				# HDF 4.0 release 2
+
+    HDFHOME=${HDF_path}/HDF4.0r2 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.0r2"
+    if [ $set_compilers = 1 ] ; then 
+        install_options="-set_compilers"
+    fi
+    ;;
+
+  HDF4.1r1 ) 				# HDF 4.1 release 1
+
+    HDFHOME=${HDF_path}/HDF4.1r1 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.1r1"
+    if [ $set_compilers = 1 ] ; then 
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then 
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+ 4.1r3_aix ) 				# HDF 4.1 release 1
+
+    HDFHOME=${HDF_path}/4.1r3_aix; export HDFHOME
+    install_script="$script_dir/INSTALL-4.1r3_aix"
+    if [ $set_compilers = 1 ] ; then 
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then 
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+HDF4.1r3 )                            # HDF 4.1 release 3
+
+    HDFHOME=${HDF_path}/HDF4.1r3 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.1r3"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  hdf4.1r4 )                            # HDF 4.1 release 4
+
+    HDFHOME=${HDF_path}/hdf4.1r4 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.1r4"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+
+  HDF4.2r0 )                            # HDF4.2 release 0  
+
+    HDFHOME=${HDF_path}/HDF4.2r0 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r0"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  HDF4.2r1 )                            # HDF4.2 release 1
+
+    HDFHOME=${HDF_path}/HDF4.2r1 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r1"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  HDF4.2r2 )                            # HDF4.2 release 2
+
+    HDFHOME=${HDF_path}/HDF4.2r2 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r2"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  HDF4.2r3 )                            # HDF4.2 release 3
+
+    HDFHOME=${HDF_path}/HDF4.2r3 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r3"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  HDF4.2r4 )                            # HDF4.2 release 4
+
+    HDFHOME=${HDF_path}/HDF4.2r4 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r4"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+  hdf-4.2.5 )                            # HDF4.2 release 5
+
+    HDFHOME=${HDF_path}/hdf-4.2.5 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r5"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  hdf-4.2.6 )                            # HDF4.2 release 6
+
+    HDFHOME=${HDF_path}/hdf-4.2.6 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r6"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  hdf-4.2.9 )                            # HDF4.2 release 9
+
+    HDFHOME=${HDF_path}/hdf-4.2.9 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r9"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  hdf-4.2.10 )                            # HDF4.2 release 10
+
+    HDFHOME=${HDF_path}/hdf-4.2.10 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r10"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  hdf-4.2.11 )                            # HDF4.2 release 10
+
+    HDFHOME=${HDF_path}/hdf-4.2.11 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r11"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  hdf-4.2.13 )                            # HDF4.2 release 10
+
+    HDFHOME=${HDF_path}/hdf-4.2.13 ; export HDFHOME
+    install_script="$script_dir/INSTALL-HDF4.2r13"
+    if [ $set_compilers = 1 ] ; then
+        install_options="-set_compilers"
+    fi
+    if [ $dbug = 1 ] ; then
+        install_options="$install_options -dbug"
+    fi
+    install_options="$install_options -start_dir ${HDFHOME}"
+    ;;
+
+  * ) 			# unsupported
+    EchoAndLog "$hdf_home installation is not supported by this script."
+    exit 1
+    ;;
+
+esac
+
+
+#
+# Run the install script
+#
+
+if [ ! -f $install_script ] ; then
+    EchoAndLog "Can't find $install_script - installation failed."
+    exit 1
+fi
+
+$install_script $install_options
+
+if [ $? != 0 ] ; then
+    EchoAndLog "$hdf_home Installation failed."
+    exit 1
+fi
+
+#
+# Starting with HDF4.1r3 internally used structures are put in vgint.h file.
+# Some users are using this file in their code. Since it is not copied
+# automatically fro hdf/src to include directories, we will do it here.
+#
+
+if [ -f ${HDFHOME}/include/vgint.h ] ; then
+    echo " "
+    echo " File ${HDFHOME}/include/vgint.h already exist."
+    echo " "
+else
+    echo " "
+    echo " Copying File ${HDFHOME}/hdf/src/vgint.h to ${HDFHOME}/include/vgint.h."
+    echo " "
+    /bin/cp ${HDFHOME}/hdf/src/vgint.h ${HDFHOME}/include/vgint.h
+fi
+
+# 
+# Pass back the HDF install directory for the toolkit installation
+# 
+
+if [ "$home_file" != "" ] ; then
+    echo $HDFHOME >> $home_file
+fi
+
+
+
+#
+# Clean up
+#
+
+cd $HDF_path
+
+if [ "$clean" = 1 ] ; then
+
+    for dir in $HDFHOME/hdf $HDFHOME/mfhdf ; do 
+
+        cd $dir
+        echo "Cleaning up in $dir ..."
+
+        if [ "$log_file" != "" ] ; then
+            echo "" >> $log_file
+            echo "Cleaning up in $dir ..." >> $log_file
+            echo "" >> $log_file
+            make clean  >> $log_file 2>&1
+        else
+            make clean
+        fi
+
+    done
+
+fi
+
+if [ "$cleano" = 1 ] ; then
+
+    cd $HDFHOME
+    echo "Removing any remaining object files ..." 
+
+    if [ "$log_file" != "" ] ; then
+        echo "" >> $log_file
+        echo "Removing any remaining object files ..." >> $log_file
+        echo "" >> $log_file
+        find . -name \*.o -print -exec rm -f {} \; >> $log_file 2>&1
+        find . -name a.out -print -exec rm -f {} \; >> $log_file 2>&1
+    else
+        find . -name \*.o -print -exec rm -f {} \; 
+        find . -name a.out -print -exec rm -f {} \; 
+    fi
+    
+fi
+
+
+if [ "$strip_install" = 1 ] ; then
+
+    StripHdfInstall
+   
+fi
+
+
+echo "------------------------------------------------------------"
+echo ""
+echo "    HDF installation ending at: `date` " 
+echo ""
+echo "------------------------------------------------------------"
+
+
+
+#
+# Write the log file trailer
+#
+
+if [ "$log_file" != "" ] ; then
+    echo "------------------------------------------------------------" >> $log_file
+    echo "" >> $log_file
+    echo "    HDF installation ending at: `date`" >> $log_file
+    echo "" >> $log_file
+    echo "------------------------------------------------------------" >> $log_file
+    echo "" >> $log_file
+fi
+

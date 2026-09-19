@@ -1,0 +1,478 @@
+#! /bin/csh -f
+#-----------------------------------------------------------------------------
+# filename:
+# 	INSTALL-AAdata
+# 
+# description:
+# 	Install script for the SDP Toolkit AA tools data files
+# 
+# usage:
+# 	INSTALL-AAdata [-sgi | -sgi32 | -sgi64 ]
+# 	INSTALL-AAdata -h
+# 
+# 	-sgi    : read environment setup script in $PGSHOME/bin/sgi (default)
+# 	-sgi32  : read environment setup script in $PGSHOME/bin/sgi32
+# 	-sgi64  : read environment setup script in $PGSHOME/bin/sgi64
+# 
+# 	-h[elp] : output this help message and exit
+# 
+# notes:
+# 	1) The -sgi, -sgi32 and -sgi64 options are only relevant for the
+# 	   SGI Challenge platform running IRIX64.  On all other platforms,
+# 	   they are ignored.
+# 
+# author:
+# 	Mike Sucher / Applied Research Corp.
+# 
+# history:
+# 	29-Sep-1994 MES Initial version
+# 	21-Oct-1994 MES Adjust name of tar file
+# 			Add code to set PGS environment variables, if needed
+# 	28-Oct-1994 MES Adjust name of tar file (PGS becomes SDP)
+# 	22-Feb-1995 MES Adjust name of tar file for Release 4.
+# 	05-May-1995 MES Adjust name of tar file for Release 5.
+# 	                Revise to modify the PCF instead of the environment
+# 	                scripts, because the product directory environment
+# 	                variable have become obsolete as of this release.
+# 	15-Nov-1995 MES Updates for IR-1
+# 			- revise default name of tar file for IR-1
+# 	                - prompt for user override of default tar file name
+# 	20-Nov-1995 MES More updates for IR-1 - revised directory structure
+# 			- find pgs-dev-env.env in $PGSHOME/bin/$BRAND
+# 			- source pgs-dev-env.env even if PGSHOME is already set
+# 			- update default PCF for each architecture
+# 	30-Nov-1995 MES More updates for IR-1 
+# 			- revised to use zcat to directly unpack compressed
+# 			  tar archive distibution file.
+# 	11-Dec-1995 MES Add /usr/bsd to base path because zcat is there
+# 			under IRIX 6.1
+# 	25-Apr-1995 MES Updates for Release A
+# 			- revise default name of tar file for Release A
+# 	30-May-1996 MES Add -sgi, -sgi32, -sgi64 and -h options.
+#       13-Aug-2001 Adura Adekunjo Modified for Sol,aris8 Support
+#
+#-----------------------------------------------------------------------------
+
+set mydir=(`pwd`)    # save startup directory
+
+set this_script = "`basename $0`"
+
+set flag	= "0"
+set sgi_mode	= 32
+
+while ("$1" != "")
+
+    switch ("$1")
+
+      case "-h":
+      case "-help":
+        sed -n '/filename:/,/author:/p' $0 | grep -v "author:" | cut -c3-300 | more
+        #this line must be here because it contains the string: "author:"
+        exit
+        breaksw
+
+      case "-sgi":
+        set sgi_mode=32
+        breaksw
+
+      case "-sgi32":
+        set sgi_mode=n32
+        breaksw
+
+      case "-sgi64":
+        set sgi_mode=64
+        breaksw
+
+      default:
+        echo "$this_script : ERROR : Unknown option $1"
+        exit
+        breaksw
+
+    endsw
+
+    shift
+
+end
+
+
+echo ""
+echo "Installing the AA tools data files."
+echo ""
+
+# Set minimal path
+
+set path = (/usr/local/bin /bin /usr/bin /usr/bsd /etc /usr/etc /usr/ucb /usr/bin/X11)
+
+
+# Get operating system type
+
+switch ( `uname -m | awk '{print $1}'` )
+  case "i386": 
+    setenv OSTYPE sco386 ; breaksw # SCO box
+  case "CRAY": 
+    setenv OSTYPE UNICOS ; breaksw # CRAY
+  default:    
+    setenv OSTYPE `uname` ; breaksw # everybody else
+endsw
+
+if(`uname -m | awk '{print $1}'`=="x86_64" || `uname -m | awk '{print $1}'`=="ia64") then
+    if("$LINUX_BRAND"== "") then 
+	echo " Error: In 64-bit linux platform the env. variable LINUX_BRAND must be et to linux32 or linux64 before running this script."
+	exit 1
+    endif
+endif
+
+# Set variable BRAND,  used in achitecture-specific path names
+
+switch ( "$OSTYPE" )
+    case "AIX": 
+	setenv BRAND ibm ; breaksw 
+    case "HP-UX": 
+	setenv BRAND hp  ; breaksw 
+    case "IRIX":  
+	setenv BRAND sgi  ; breaksw 
+    case "IRIX64":  
+	if ("$sgi_mode" == 32) then
+	    setenv BRAND sgi
+        else if ("$sgi_mode" == 64) then
+	    setenv BRAND sgi64
+        else if ("$sgi_mode" == n32) then
+	    setenv BRAND sgi32
+        else
+	    setenv BRAND sgi
+        endif
+        breaksw
+    case "OSF1":  
+	setenv BRAND dec  ; breaksw 
+    case "sco386": 
+	setenv BRAND sco  ; breaksw 
+    case "SunOS": 
+	# distinguish between SunOS 5.x and 4.x versions
+	if (`uname -r | awk -F. '{print $1, $2}'` == "5 10") then 
+	    setenv BRAND sun5.10
+	else if (`uname -r | awk -F. '{print $1, $2}'` == "5 9") then 
+	    setenv BRAND sun5.9
+	else if (`uname -r | awk -F. '{print $1, $2}'` == "5 8") then 
+	    setenv BRAND sun5.8
+	else                                
+	    setenv BRAND sun5
+	endif
+	if (`uname -r | awk -F. '{print $1}'` == "4") then
+           setenv BRAND sun4
+	endif
+        breaksw
+    case "UNICOS": 
+	setenv BRAND cray ; breaksw
+    case "Linux": 
+	setenv BRAND linux ; breaksw
+	if(`uname -m | awk '{print $1}'`=="x86_64" || `uname -m | awk '{print $1}'`=="ia64") then
+	    if("$LINUX_BRAND"="linux64") then
+		setenv BRAND linux64 ; breaksw
+	    else
+		setenv BRAND linux32 ; breaksw
+	    endif
+	endif
+    default:
+	echo "Operating system: $OSTYPE not supported"
+        exit 1
+        breaksw
+endsw
+
+
+#
+# Determine PGSHOME
+# Find and source the pgs-dev-env.csh file
+#
+
+set dev_env = "bin/$BRAND/pgs-dev-env.csh"
+
+if (! $?PGSHOME) then
+
+    if ( -f ${mydir}/${dev_env} ) then
+
+        setenv PGSHOME $mydir
+        source ${PGSHOME}/${dev_env}
+
+    else 
+
+        echo "Please enter the PGS home directory pathname" | awk '{printf "%s: ", $0 }'
+        set ans=(`line`)
+
+        if (-d "$ans") then
+            setenv PGSHOME `cd $ans; pwd`
+        else
+            echo "Unable to find directory: $ans"
+            echo "Please verify the location of the PGS home directory."
+            echo "Then re-run this script."
+            exit 1
+        endif
+
+        if ( -f ${PGSHOME}/${dev_env} ) then
+            source ${PGSHOME}/${dev_env}
+        else 
+            echo "Unable to find environment script: ${PGSHOME}/${dev_env}"
+            echo "Please verify the location of the PGS home directory."
+            echo "Then re-run this script."
+            exit 1
+        endif
+
+    endif
+
+else
+
+    if ( -f ${PGSHOME}/${dev_env} ) then
+
+        source ${PGSHOME}/${dev_env}
+
+    else 
+
+        echo "Unable to find environment script: ${PGSHOME}/${dev_env}"
+        echo "Please verify the location of the PGS home directory,"
+        echo "and update the PGSHOME environment variable, if needed."
+        echo "Then re-run this script."
+        exit 1
+
+    endif
+
+endif
+
+echo "The PGS home directory is: ${PGSHOME}"
+echo ""
+
+
+#
+# Get the name of the distribution file
+#
+
+set distrib_file=( SDPTK5.1v1.00-AAdata.tar.Z )	# default distribution file 
+
+echo "The default AA data distribution file name is: $distrib_file "	# optional user override
+echo "Hit return to accept, or type new name to override" | awk '{printf "%s : ", $0 }'
+set ans=(`line`) 
+if ( "$ans" == "" ) then
+    echo ""
+else if ( `echo $ans | grep '.tar.Z$'` != "" ) then
+    echo ""
+    set distrib_file = "$ans"
+else
+    echo ""
+    echo "$ans is not a valid distribution file name. Name must end in '.tar.Z'"
+    exit 1
+endif
+
+
+#
+# Get the location of the distribution file
+#
+
+set distrib_path=(${PGSHOME})					# look in ${PGSHOME}
+if (-f ${distrib_path}/${distrib_file} ) goto get_AAdata_path
+
+set distrib_path=(`dirname ${PGSHOME}`)			# look in ${PGSHOME}/..
+if (-f ${distrib_path}/${distrib_file} ) goto get_AAdata_path
+
+set distrib_path=(`pwd`)					# look in this directory
+if (-f ${distrib_path}/${distrib_file} ) goto get_AAdata_path
+
+echo "Pathname where distribution file '$distrib_file' is located" | awk '{printf "%s ? ", $0 }'
+set ans=(`line`)
+set ans="`eval echo $ans`"
+
+if ($ans != "") then					# make sure file exists
+    if (-d $ans) set distrib_path=(`cd $ans; pwd`)
+endif
+
+if (! -f ${distrib_path}/${distrib_file} ) then
+    echo "Error: can't find distribution file ${distrib_path}/${distrib_file}"
+    echo "AAdata install cancelled."
+    exit 1
+endif
+
+
+#
+# Get the location of the AAdata directory
+#
+
+get_AAdata_path:
+
+echo ""						# ask the user
+echo "Pathname where directory 'AAdata' will be created [${PGSHOME}]" | awk '{printf "%s ? ", $0 }'
+set ans=(`line`)
+set ans="`eval echo $ans`"
+
+if ($ans == "") then				# make sure directory exists
+    set AAdata_path=(${PGSHOME})
+else 
+    if (-d $ans) set AAdata_path=(`cd $ans; pwd`)
+endif
+
+if (! -d $AAdata_path) then
+    echo "Error: directory $AAdata_path does not exist."
+    echo "AAdata install cancelled."
+    exit 1
+endif
+
+
+#
+# Confirm before proceeding
+#
+
+echo ""	
+echo "The AAdata directory will be restored from: "
+echo "    ${distrib_path}/${distrib_file}"
+echo ""
+echo "The AAdata directory will be created in: "
+echo "     ${AAdata_path}"
+
+echo ""
+echo "Continue [no]" | awk '{printf "%s ? ", $0 }'
+set ans=(`line`); set ans="`echo $ans | cut -c1`"
+
+switch ($ans)
+    case "y":
+    case "Y":
+        echo "Confirmed."
+        breaksw
+    default:
+        echo "Cancelled."
+        exit 1
+        breaksw
+endsw
+
+
+cd $AAdata_path
+
+if (-d "AAdata") then
+    echo ""
+    echo "The AAdata directory already exists."
+    echo "Replace it [no]" | awk '{printf "%s ? ", $0 }'
+    set ans=(`line`); set ans="`echo $ans | cut -c1`"
+
+    switch ($ans)
+      case "y":
+      case "Y":
+        echo ""
+        echo "Removing old AAdata directory"
+        /bin/rm -r -f AAdata
+        breaksw
+
+      default:
+        echo ""
+        echo "Cancelled"
+        exit 1
+        breaksw
+    endsw
+endif
+    
+echo ""
+echo "Extracting files ..."
+
+zcat ${distrib_path}/${distrib_file} | tar xvf -
+
+echo ""
+echo "... completed."
+
+
+#
+# Ask the user if the Process Control File should be patched
+#
+
+echo ""
+echo "Patch the default Process Control File(s) [yes]" | awk '{printf "%s ? ", $0 }'
+set ans=(`line`); set ans="`echo $ans | cut -c1`"
+echo ""
+
+switch ($ans)
+    case "n":
+    case "N":
+        echo "The default Process Control File(s) will NOT be patched."
+        echo "The user must manually edit the file:  "
+        echo ""
+        echo "   $PGS_PC_INFO_FILE"
+        echo ""
+        echo "to set the directory for PRODUCT INPUT FILES to: "
+        echo ""
+        echo "     ${AAdata_path}/AAdata"
+        echo ""
+        echo "in order for the AA tools to work."
+        echo ""
+        echo "NOTE:"
+        echo ""
+        echo "If this installation is built to support multiple architectures,"
+        echo "the default Process Control File for EACH architecture must be "
+        echo "updated."
+        echo ""
+        goto cleanup
+        breaksw
+
+    default:
+        echo "The default Process Control File(s) will be patched."
+        echo ""
+        echo "NOTE:"
+        echo ""
+        echo "All architecture-specific default Process Control Files"
+        echo "found will be updated."
+        echo ""
+        breaksw
+endsw
+
+
+#
+# Patch the default Process Control File(s)
+#
+
+cd $PGSRUN
+
+set pc_dirs = ( `find . -type d -print | cut -c3- | grep -v /` )
+set pc_file = "`basename $PGS_PC_INFO_FILE`"
+
+foreach dir ( $pc_dirs ) 
+
+    if ( -f $dir/$pc_file ) then
+
+        set sed_file="$dir/$pc_file"
+        echo "    patching file: `pwd`/${sed_file}"
+
+#        set sed_line=(`nl -ba $sed_file | sed -n '/?   PRODUCT INPUT FILES/,/~\/runtime/p' | awk '/~\/runtime/ {print $1}'`)
+        set sed_old_string="AA_DATA_INSTALL_DIR"
+        set sed_new_string="${AAdata_path}/AAdata"
+#        set sed_command="${sed_line}s%${sed_old_string}%${sed_new_string}%"
+        set sed_command="s%${sed_old_string}%${sed_new_string}%"
+        sed -e ${sed_command} < ${sed_file} >! ${sed_file}.sed
+        mv ${sed_file}.sed ${sed_file}
+
+    endif
+
+end
+
+#
+# Cleanup
+#
+
+cleanup:
+
+echo ""
+echo "Remove the distribution file [no]" | awk '{printf "%s ? ", $0 }'
+set ans=(`line`); set ans="`echo $ans | cut -c1`"
+
+switch ($ans)
+    case "y":
+    case "Y":
+        /bin/rm -f ${distrib_path}/${distrib_file}
+        if ($status == 0) then
+            echo "File ${distrib_path}/${distrib_file} was removed."
+        else
+            echo "File ${distrib_path}/${distrib_file} could not be removed."
+        endif
+        breaksw
+
+    default:
+        echo "File ${distrib_path}/${distrib_file} was not removed."
+        breaksw
+endsw
+
+echo ""
+echo "AA tools data files installation complete."
+echo ""
+
+

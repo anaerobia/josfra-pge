@@ -1,0 +1,135 @@
+# file: pgs-env.ksh (Korn/Bourne shell version)
+# set up the PGS directory environment variables
+# this version is for Release A of the toolkit, DAAC and SCF versions
+
+
+: ${sgi_mode:=32}	# by default, SGI mode is standard 32-bit
+
+: ${use_flavor:=0}	# by default, do not use "flavors"
+
+
+# save user path, then set path to a base subset of directories for unknown host
+
+user_path=$PATH
+PATH=/usr/local/bin:/bin:/usr/bin:/etc:/usr/etc:/usr/ucb:/usr/bin/X11
+export PATH 
+
+# get operating system type
+
+case "`uname -m | awk '{print $1}'`" in
+  i386) 	OSTYPE=sco386   	;; 	# SCO box
+  CRAY) 	OSTYPE=UNICOS   	;; 	# CRAY
+  *) 		OSTYPE="`uname`" 	;; 	# everybody else
+esac
+
+# set variable BRAND,  used in achitecture-specific path names
+
+case "$OSTYPE" in
+  AIX) 	BRAND="ibm" ;;
+  HP-UX) 	BRAND="hp" ;;
+  IRIX) 	BRAND="sgi" ;;
+  IRIX64) 
+    case $sgi_mode in
+      64 ) BRAND=sgi64 ;;
+      n32) BRAND=sgi32 ;;
+      32 ) BRAND=sgi ;;
+      *  ) BRAND=sgi ;;  # just in case
+    esac
+    ;;
+  OSF1) 	BRAND="dec" ;;
+  sco386) 	BRAND="sco" ;;
+  SunOS) 	# distinguish between SunOS 5.x and 4.x versions
+    if [ "`uname -r | awk -F. '{print $1, $2}'`" = "5 10" ] ; then 
+        BRAND="sun5.10"
+   elif [ "`uname -r | awk -F. '{print $1, $2}'`" = "5 9" ] ; then 
+        BRAND="sun5.9"
+   elif [ "`uname -r | awk -F. '{print $1, $2}'`" = "5 8" ] ; then 
+        BRAND="sun5.8"
+   elif
+        [ "`uname -r | awk -F. '{print $1}'`" = "4" ] ; then 
+        BRAND="sun4"
+   else
+	BRAND="sun5"
+   fi	
+    ;;
+  UNICOS) BRAND="cray" ;;
+  Linux) BRAND="linux" ;;
+  *)	 echo "Operating system: $OSTYPE not supported" ;;
+esac
+export BRAND
+
+
+# copy the machine-specific path to variable pgs_path
+
+pgs_path=$PATH
+
+# set PGS-related environment variables
+# these may be referred to in makefiles and on compiler command lines
+
+if [ "$PGSHOME" != "" ] ; then
+
+# set up base set of PGS Toolkit directory variables.
+
+    PGSBIN=$PGSHOME/bin/$BRAND		# executable files
+    PGSDAT=$PGSHOME/database/$BRAND	# database files
+    PGSINC=$PGSHOME/include		# include header files
+    PGSLIB=$PGSHOME/lib/$BRAND 		# library files
+    PGSMSG=$PGSHOME/message		# SMF message files
+    PGSOBJ=$PGSHOME/obj/$BRAND		# object files
+    PGSRUN=$PGSHOME/runtime		# runtime work files
+    PGSSRC=$PGSHOME/src			# toolkit source files
+    PGSTST=$PGSHOME/test		# test source files
+
+    if [ $use_flavor = 1 ] ; then
+
+        PGSBIN=${PGSBIN}_${flavor}		# executable files
+        PGSLIB=${PGSLIB}_${flavor}  		# library files
+        PGSOBJ=${PGSOBJ}_${flavor}		# object files
+
+    fi
+
+    export PGSHOME PGSBIN PGSDAT PGSINC PGSLIB 
+    export PGSMSG  PGSOBJ PGSRUN PGSSRC PGSTST
+
+# update path variables
+
+    PATH=$PATH:$PGSBIN; export PATH		# add PGSBIN to path
+    pgs_path=$pgs_path:$PGSBIN			# add PGSBIN to pgs  path
+    user_path=$user_path:$PGSBIN		# add PGSBIN to user path
+
+alias pgshome='cd $PGSHOME/\!*'
+alias pgslib='cd $PGSLIB/\!*'
+alias pgsbin='cd $PGSBIN/\!*'
+alias pgsdat='cd $PGSDAT/\!*'
+
+# set up variables needed by Process Control (PC) tools. 
+# user may customize these in their private .cshrc file
+
+    PGS_PC_INFO_FILE=$PGSRUN/$BRAND/PCF.relB0
+    if [ $use_flavor = 1 ] ; then
+	case $flavor in
+	    *daac*)
+		PGS_PC_INFO_FILE=$PGSRUN/$BRAND/PCF.relB0_daac
+	    ;;
+	    *scf*)
+		PGS_PC_INFO_FILE=$PGSRUN/$BRAND/PCF.relB0_scf
+	    ;;
+	esac
+    fi
+
+    export PGS_PC_INFO_FILE 
+
+
+
+else
+
+    echo "You must first set the environment variable PGSHOME"
+
+fi
+
+
+# restore user path
+
+PATH=$user_path
+export PATH 
+

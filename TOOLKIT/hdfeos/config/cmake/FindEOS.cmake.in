@@ -1,0 +1,77 @@
+#
+# To be used by projects that make use of CMakeified hdfeos tools @HDFEOS_PACKAGE_VERSION@
+#
+
+#
+# Find the HDFEOS includes and get all installed HDFEOS library settings from
+# hdfeos-config.cmake file : Requires a CMake compatible HDFEOS-2.19 or later 
+# for this feature to work. The following vars are set if HDFEOS is found.
+#
+# HDFEOS_FOUND               - True if found, otherwise all other vars are undefined
+# HDFEOS_INCLUDE_DIR         - The include dir for main *.h files
+# HDFEOS_VERSION_STRING      - full version (e.g. @HDFEOS_PACKAGE_VERSION@)
+# HDFEOS_VERSION_MAJOR       - major part of version (e.g. @HDFEOS_PACKAGE_VERSION_MAJOR@)
+# HDFEOS_VERSION_MINOR       - minor part (e.g. @HDFEOS_PACKAGE_VERSION_MINOR@)
+# 
+# The following boolean vars will be defined
+# HDFEOS_ENABLE_PARALLEL - 1 if HDFEOS parallel supported
+# HDFEOS_BUILD_TOOLS     - 1 if HDFEOS was compiled with tools on
+# 
+# Target names that are valid (depending on enabled options)
+# will be the following
+#
+# HDFEOS              : HDFEOS C library
+# HDFEOS_tools        : the tools library
+# 
+# To aid in finding HDFEOS as part of a subproject set
+# HDFEOS_ROOT_DIR_HINT to the location where @HDFEOS_PACKAGE@@HDFEOS_PACKAGE_EXT@-config.cmake lies
+
+INCLUDE (SelectLibraryConfigurations)
+INCLUDE (FindPackageHandleStandardArgs)
+
+# The HINTS option should only be used for values computed from the system.
+SET (_HDFEOS_HINTS
+    $ENV{HOME}/.local
+    $ENV{HDFEOS_ROOT}
+    $ENV{HDFEOS_ROOT_DIR_HINT}
+)
+# Hard-coded guesses should still go in PATHS. This ensures that the user
+# environment can always override hard guesses.
+SET (_HDFEOS_PATHS
+    $ENV{HOME}/.local
+    $ENV{HDFEOS_ROOT}
+    $ENV{HDFEOS_ROOT_DIR_HINT}
+    /usr/lib/@HDFEOS_PACKAGE@
+    /usr/share/@HDFEOS_PACKAGE@
+    /usr/local/@HDFEOS_PACKAGE@
+    /usr/local/@HDFEOS_PACKAGE@/share
+)
+
+FIND_PATH (HDFEOS_ROOT_DIR "@HDFEOS_PACKAGE@@HDFEOS_PACKAGE_EXT@-config.cmake"
+    HINTS ${_HDFEOS_HINTS}
+    PATHS ${_HDFEOS_PATHS}
+    PATH_SUFFIXES
+        cmake/@HDFEOS_PACKAGE@
+        lib/cmake/@HDFEOS_PACKAGE@
+        share/cmake/@HDFEOS_PACKAGE@
+)
+
+MESSAGE(STATUS "HDFEOS_ROOT_DIR is ${HDFEOS_ROOT_DIR}")
+FIND_PATH (HDFEOS_INCLUDE_DIRS "HDFEOSVersion.h"
+    HINTS ${_HDFEOS_HINTS}
+    PATHS ${_HDFEOS_PATHS}
+    PATH_SUFFIXES
+        include
+        Include
+)
+MESSAGE(STATUS "HDFEOS_INCLUDE_DIRS is ${HDFEOS_INCLUDE_DIRS}")
+
+# For backwards compatibility we set HDFEOS_INCLUDE_DIR to the value of
+# HDFEOS_INCLUDE_DIRS
+SET ( HDFEOS_INCLUDE_DIR "${HDFEOS_INCLUDE_DIRS}" )
+
+IF (HDFEOS_INCLUDE_DIR)
+  SET (HDFEOS_FOUND "YES")
+  INCLUDE (${HDFEOS_ROOT_DIR}/@HDFEOS_PACKAGE@@HDFEOS_PACKAGE_EXT@-config.cmake)
+  MESSAGE(STATUS "HDFEOS_FOUND is ${HDFEOS_FOUND}")
+ENDIF (HDFEOS_INCLUDE_DIR)

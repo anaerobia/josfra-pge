@@ -1,0 +1,158 @@
+#! /bin/ksh
+##############################################################################
+#                                                                            
+# Name        : EcTkLinkScript  
+# Author      : Megan E. D. Spencer                                            
+# Description : Installation of DROP4PY patch                                
+# Date        : January 12, 1999 
+#                                                                            
+# Date       Who              What                                           
+# ----       ---------        --------------------                           
+# 01/11/1999 Megan E D Spencer Creation of file                        
+#                                                                          
+# 04/22/2000 Yangling Huang   NCR ECSed21212, ECSed24680
+# 11/14/2000 Yangling Huang   NCR ECSed28955
+# 04/15/2007 Abe Taaheri      Removed Sun5.5 and sun5 architecture
+##############################################################################
+
+# Export all variables
+set -o allexport
+ARCH=$(EcCoScriptlib get_architecture)
+#echo  $ARCH
+ret_status=0
+[ $# -eq 0 ] && print "Usage: $0 MODE" && exit 1
+
+MODE=$1
+eval $(EcCoScriptlib set_environment $MODE)
+
+# Make sure needed variables are set
+[ -z "$ECS_HOME"	] && NOTSET="$NOTSET ECS_HOME"
+
+[ ! -z "$NOTSET" ] && {
+
+ echo "Re-run after setting the following environment variables:n\t$NOTSET"
+	exit 1
+}
+#echo Please ensure that this script is in the staging area!!
+#echo Enter the full path name for the mode which this set of links will be installed upto but NOT including the mode name.
+
+#read ECS_HOME
+#echo $ECS_HOME
+#if [ ! -d $ECS_HOME ] ; then 
+#	echo    The directory   does not exist.  Please rerun script and enter directory path name at the appropriate time
+#	break
+#fi
+	  
+#echo Enter the mode for which you want to install the Toolkit DROP4PY patch 
+#read MODE
+
+       if [ ! -d ${ECS_HOME}/${MODE} ] ; then 
+           echo The directory ${ECS_HOME}/${MODE} does not exist.  Please rerun script and enter mode name at the appropriate time.
+             break
+             return 1
+
+       else
+
+       if [ ! -d ${ECS_HOME}/${MODE}/CUSTOM ] ; then 
+
+             mkdir -p ${ECS_HOME}/${MODE}/CUSTOM
+
+       fi  
+
+        pwd | read olddir	    
+	cd ${ECS_HOME}/${MODE}/CUSTOM
+
+
+	if [ ! -d daac_toolkit_f77 ] ; then
+            mkdir -p daac_toolkit_f77
+        else
+            return 0 
+	fi
+
+	pgshome=${ECS_HOME}/${MODE}/CUSTOM/daac_toolkit_f77
+	common_tk=${ECS_HOME}/${MODE}/CUSTOM/TOOLKIT/toolkit
+	cd $pgshome
+	if [ ! -d TOOLKIT ] ; then
+	    echo Creating TOOLKIT Directory...
+	    ln -s ${ECS_HOME}/${MODE}/CUSTOM/TOOLKIT TOOLKIT
+        fi
+
+	cd $pgshome
+	if [ ! -d toolkit ] ; then
+	    echo Creating toolkit Directory...
+	    ln -s ${ECS_HOME}/${MODE}/CUSTOM/TOOLKIT/toolkit toolkit
+        fi
+
+	for sub_dir in database doc include message runtime ; do
+
+	  if [ ! -d $pgshome/$sub_dir ] ; then
+             echo Creating $pgshome/$sub_dir Directory...
+             ln -s ${common_tk}/$sub_dir $pgshome/$sub_dir
+	  fi  
+	done
+
+	if [ ! -d  $pgshome/bin ] ; then
+	    echo Creating $pgshome/bin Directory... 
+	    mkdir $pgshome/bin
+	fi
+
+	if [ ! -d  $pgshome/lib ] ; then
+	    echo Creating $pgshome/lib Directory... 
+	    mkdir $pgshome/lib
+	fi
+
+	if [ -f  $pgshome/VERSION ] ; then
+        touch $pgshome/VERSION
+	else
+	  cp ${common_tk}/VERSION $pgshome/VERSION
+
+	fi  
+
+       if [$ARCH = linux]; then
+          for sub_dir in linux ; do
+              if [ ! -d $pgshome/bin/$sub_dir ] ; then
+                echo Creating $pgshome/bin/$sub_dir Directory...
+                ln -s $common_tk/bin/${sub_dir}_daac_f77 $pgshome/bin/$sub_dir
+               fi
+
+             if [ ! -d  $pgshome/lib/$sub_dir ] ; then
+               echo Creating $pgshome/lib/$sub_dir Directory...
+               ln -s $common_tk/lib/${sub_dir}_daac_f77 $pgshome/lib/$sub_dir
+               fi
+          done
+ 	else
+  	  for sub_dir in sgi32 sgi64 ; do
+               if [ ! -d $pgshome/bin/$sub_dir ] ; then
+		 echo Creating $pgshome/bin/$sub_dir Directory...
+		   if [ -d $common_tk/bin/${sub_dir}_daac_f77 ] ; then
+		      ln -s $common_tk/bin/${sub_dir}_daac_f77 $pgshome/bin/$sub_dir
+		   fi
+               fi
+
+
+               if [ ! -d  $pgshome/lib/$sub_dir ] ; then
+                  echo Creating $pgshome/lib/$sub_dir Directory...   
+                  ln -s $common_tk/lib/${sub_dir}_daac_f77 $pgshome/lib/$sub_dir
+	       fi    
+	  done
+#	  echo $ARCH $pgshome/bin $common_tk/bin
+	fi	  	
+
+	if [ ! -d ${CUSTOM}/daac_toolkit_f77 ] ; then
+      	  return 1 
+          echo Please rerun script if it is required.
+          exit 1
+        else
+          return 0 
+          
+    fi
+    echo 
+    echo  The patch process is now complete 
+	ret_status = $? 
+#      echo Enter the mode for which you want to install the Toolkit DROP4PY patch otherwise, type NONE 
+
+#       read MODE
+#       typeset -u MODE
+#  done
+
+fi

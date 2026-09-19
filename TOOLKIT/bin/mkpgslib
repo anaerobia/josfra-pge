@@ -1,0 +1,430 @@
+#!/bin/csh -f
+#-----------------------------------------------------------------------------
+# file:		mkpgslib
+#
+# description:
+# 	This file helps to automate the process of building and updating
+# 	the PGS Toolkit object library.  It takes all the object files in
+#       ${PGSLIB}/obj/<XXX>, strips off the leading PGS_<XXX>_ from the file 
+#       name, and creates an updated version of the library $PGSLIB/libPGSTK.a 
+#       which uses the shortened file names.  This is to help avoid name
+#       collision in object module names in the library.  This script makes
+#       heavy use of environment variables defined in pgs-dev-env.csh.
+# 	
+# usage:
+# 	mkpgslib (<XXX> <XXX> ...)
+#       where <XXX> are toolkit group mnemonics
+#
+# authors:        Mike Sucher - Applied Research Corporation
+#                 Guru Tej S. Khalsa - Applied Research Corporation
+#	          Graham J. Bland - EOSL
+#                 Abe Taaheri - Emergent Information Technologies, Inc.
+#
+# history:
+# 	25-Mar-1994 MES  Initial version
+# 	31-Mar-1994 MES  Improve portability, strip off <XXX>_ from filename
+#       25-Apr-1994 GTSK Improve portability (works on all PGS platforms) 
+#			 Modified to build single library: libPGSTK.a
+#       07-Sep-1994 GJB  Change copy command to move *.o rather than PGS_*
+#			 this accounts for non PGS_ modules.
+#       14-Sep-1994 GTSK Modified to use PGSOBJ where appropriate (instead of
+#                        $PGSLIB/obj).  Modified script to make the creation of
+#                        a backup of libPGSTK.a an option (was automatic).
+#                        Default behavior is NO backup.  Make backup if first
+#                        command line argument is '-b'.
+#       20-Sep-1994 GTSK Added ranlib command for SunOS 4.x.  This script now
+#                        depends on the environment variable BRAND defined in 
+#                        pgs-dev-env.csh.
+#       20-Sep-1994 MES Patch to figure out sun4 in case BRAND is not defined.
+# 			 If not, will run just a bit slower.
+#       12-Mar-2001 AT  Modified for linux
+#       17-Aug-2001 AA  Modified for Solaris8
+#       17-Oct-2005 AT  Modified for Solaris9
+#       17-Oct-2005 AT  Modified for Solaris10
+#       02-Feb-2006 AT  Further Modification for Solaris9 & Solaris10
+#
+#-----------------------------------------------------------------------------
+
+#
+# make sure no user-defined aliases interfere with commands
+#
+
+unalias rm 
+unalias cp 
+unalias cd 
+unalias mv 
+unalias ls 
+unalias ar 
+unalias chmod 
+unalias mkdir
+
+#
+# make sure environment variables PGSLIB, PGSRLIB, PGSOBJ and BRAND are set
+#
+
+if($?PGSOBJ) then
+    cd ${PGSOBJ}
+else
+    echo "The environment variable PGSOBJ must be set."
+    exit
+endif
+
+
+if ( $?PGSRLIB) then
+   if ($PGSRLIB != "YES") then
+     setenv PGSRLIB  "NO" 
+   else
+    setenv PGSRLIB "YES"
+   endif
+else 
+     setenv PGSRLIB  "NO" 
+endif
+
+if($?BRAND == 0) then
+    if ("`uname`" == "SunOS") then
+         set cbrand=`uname -r | awk -F. '{print $1, $2}'`
+        if ("$cbrand" == "5 10") then
+            setenv BRAND sun5.10
+        else if ("$cbrand" == "5 9") then
+            setenv BRAND sun5.9
+        else if ("$cbrand" == "5 8") then
+            setenv BRAND sun5.8
+	else if ("$cbrand" == "5 5") then
+            setenv BRAND sun5
+         else
+            setenv BRAND sun4
+         endif
+    else if ("`uname`" == "IRIX64") then
+        if ("$ARCH" == "irix65") then
+           setenv BRAND irix65
+        else
+           setenv BRAND sgi
+        endif
+    else if ("`uname`" == "Linux") then
+	if( "`uname -m | awk '{print $1}'`" == "x86_64" || "`uname -m | awk '{print $1}'`" == "ia64" ) then
+	    if( "$LNX_COMP_FLAG" != "-m32" ) then
+		setenv BRAND linux64
+	    else
+		setenv BRAND linux32
+	    endif
+	else
+	    setenv BRAND linux
+	endif
+    else if ("`uname`" == "Darwin") then
+	if( "`uname -m | awk '{print $1}'`" == "x86_64" || "`uname -m | awk '{print $1}'`" == "ia64"   || "`uname -m | awk '{print $1}'`" == "i386"   || "`uname -m | awk '{print $1}'`" == "i686") then
+	    if( "$MACINTEL_COMP_FLAG" == "-m32" ||  "$MACINTEL_COMP_FLAG" == "-m32 -fPIC" ) then
+		setenv BRAND macintel32
+	    else
+		setenv BRAND macintel64
+	    endif
+	else
+	    setenv BRAND macintosh
+	endif
+    else
+        setenv BRAND NOT_SUN_OR_SGI
+    endif
+endif
+
+
+#
+# check to see if backup has been requested
+#
+
+if ("$1" == "-b") then
+   set MAKE_BACKUP=1
+   set FIRST=$2
+   shift argv
+else
+   set FIRST=$1
+endif
+
+#
+# set shell variable GROUPS to all arguments
+# if any, otherwise set it to contain all
+# directories found in $PGSOBJ
+#
+
+if ("$FIRST" != "") then
+    set GROUPS=($argv)
+else
+    set GROUPS=`/bin/ls`
+endif
+
+#
+# save old library if requested (and if found) 
+#
+if ($PGSRLIB == "YES" ) then 
+
+  if ( -e $PGSLIB/libPGSTK_r.a ) then
+    echo ""
+
+    if ($?MAKE_BACKUP) then
+      echo "Saving old library as $PGSLIB/libPGSTK_r.a.old ..."
+      mv $PGSLIB/libPGSTK_r.a $PGSLIB/libPGSTK_r.a.old
+      cp $PGSLIB/libPGSTK_r.a.old $PGSLIB/libPGSTK_r.a
+    endif
+    echo "Updating ${PGSLIB}/libPGSTK_r.a..."
+  else
+    echo ""
+    if ($?MAKE_BACKUP) then
+      echo "Could not find old library $PGSLIB/libPGSTK_r.a.  no backup made."
+    endif
+    echo "Creating ${PGSLIB}/libPGSTK_r.a..."
+  endif
+else
+    if ( -e $PGSLIB/libPGSTK.a ) then
+      echo ""
+        if ($?MAKE_BACKUP) then
+	  echo "Saving old library as $PGSLIB/libPGSTK.a.old ..."
+          mv $PGSLIB/libPGSTK.a $PGSLIB/libPGSTK.a.old
+          cp $PGSLIB/libPGSTK.a.old $PGSLIB/libPGSTK.a
+        endif
+        echo "Updating ${PGSLIB}/libPGSTK.a..."
+      
+    else
+       echo ""
+       if ($?MAKE_BACKUP) then
+         echo "Could not find old library $PGSLIB/libPGSTK.a.  No backup made."
+       endif
+       echo "Creating ${PGSLIB}/libPGSTK.a..."
+   endif
+endif
+#
+# Build the library 
+#
+# NOTE: This script replaces old object files
+#       with their newer counterparts.  This
+#       means that the library can be updated
+#       for a single group without affecting any
+#       any other groups.  It also means that
+#       there will be conflicts if an object file
+#       has a different name between builds.  In
+#       this case it is likely that warnings will
+#       be issued at compile time that certain routine
+#       are multiply defined.
+
+foreach GRP ($GROUPS)
+
+    if ($GRP == "-b") then
+	echo ""
+	echo "Ignoring backup switch '-b': must be first command line argument."
+	echo "WARNING: no backup library created."
+ 	continue
+    endif
+
+    if( -d  "${PGSOBJ}/$GRP" ) then        # must be valid tool group to proceed
+
+
+        cd  ${PGSOBJ}/${GRP}
+        echo ""
+        echo "Building group: $GRP to PGS Toolkit library"
+    
+        #
+        # copy all object files to ./tmp without the leading PGS_<XXX>_ in filename
+        #
+
+	if ( -d "tmp" ) then
+	    \rm -rf tmp
+	    if ( -d "tmp") then
+		echo "unable to delete old 'tmp' directory in $PGSOBJ/$GRP,"
+		if ($PSGRLIB == "YES") then
+		  echo "skipping $GRP ($PGSLIB/libPGSTK_r.a will NOT be updated"
+		else
+		  echo "skipping $GRP ($PGSLIB/libPGSTK.a will NOT be updated"
+		endif
+		echo "with $GRP)"
+		continue
+	    endif
+	endif
+        mkdir tmp
+        if (-d "tmp" ) then
+        else
+            echo "Unable to create local directory ${PGSOBJ}/${GRP}/tmp"
+            echo "$GRP not built to PGS Toolkit library"
+	    echo ""
+            exit
+        endif
+
+        # Sun, SGI, DEC versions: awk can't handle multi-char field separators
+        # so we do it the hard way, using for loops and printf statements
+
+	if ( -e ".cp-tmp" ) then
+	    \rm -f .cp-tmp
+	    if ( -e ".cp-tmp") then
+		echo "unable to delete old '.cp-tmp' file in $PGSOBJ/$GRP,"
+		if ($PGSRLIB == "YES" ) then
+		  echo "skipping $GRP ($PGSLIB/libPGSTK_r.a will NOT be updated"
+		else
+		  echo "skipping $GRP ($PGSLIB/libPGSTK.a will NOT be updated"
+		endif
+		echo "with $GRP)"
+		continue
+	    endif
+	endif
+
+	set PGSFILES=""
+	if ($PGSRLIB == "YES"  ) then
+	  if ( -e $PGSLIB/libPGSTK_r.a ) then
+	    if ($BRAND == "linux" || $BRAND == "linux32" || $BRAND == "linux64" || $BRAND == "macintosh" || $BRAND == "macintel" || $BRAND == "macintel32" || $BRAND == "macintel64") then
+		set tmp_PGSFILES=`/bin/ls -C1 *.o`
+	    else
+		if ($BRAND == "sun5.9" || $BRAND == "sun5.10") then
+		    set tmp_PGSFILES=`/bin/ls -C1 *.o`
+		else
+		    set tmp_PGSFILES=`/bin/ls -C1 -t *.o $PGSLIB/libPGSTK_r.a | sort -r`
+		endif
+	    endif
+	    foreach tmp_PGSFILE ( $tmp_PGSFILES )
+	      if ( "`basename $tmp_PGSFILE`" == "libPGSTK_r.a" ) then
+		break
+	      endif
+		  set PGSFILES=($PGSFILES `basename $tmp_PGSFILE`)
+	    end
+	  else
+	    set PGSFILES=`/bin/ls *.o`
+	  endif
+	else
+	  if ( -e $PGSLIB/libPGSTK.a ) then
+	    if ($BRAND == "linux" || $BRAND == "linux32" || $BRAND == "linux64" || $BRAND == "macintosh" || $BRAND == "macintel" || $BRAND == "macintel32" || $BRAND == "macintel64") then
+		set tmp_PGSFILES=`/bin/ls -C1 *.o`
+	    else
+		if ($BRAND == "sun5.9" || $BRAND == "sun5.10") then
+		    set tmp_PGSFILES=`/bin/ls -C1 *.o`
+		else
+		    set tmp_PGSFILES=`/bin/ls -C1 -t *.o $PGSLIB/libPGSTK.a | sort -r`
+		endif
+	    endif
+	    foreach tmp_PGSFILE ( $tmp_PGSFILES )
+	      if ( "`basename $tmp_PGSFILE`" == "libPGSTK.a" ) then
+		break
+	      endif
+		set PGSFILES=($PGSFILES `basename $tmp_PGSFILE`)
+	    end
+	  else
+	    set PGSFILES=`/bin/ls *.o`
+	  endif
+	endif
+
+	foreach PGSFILE ($PGSFILES)
+	    set shortname = `echo $PGSFILE | awk -F_ '{for (i = 3; i < NF; ++i) printf "%s_", $i } {printf "%s\n", $NF} '`
+	    set grpname=`echo $shortname | awk '{ min=13; len = length($1); start = 1+len-min; if (start<1) start=1; printf "%s\n", substr($1, start, min-2) }'`
+	    echo "cp $PGSFILE tmp/$GRP$grpname" >>! .cp-tmp
+	end
+
+	# 
+	# copy files (as above) if .cp-tmp is not zero size
+	# otherwise indicate that no PGS_ files were found
+	#
+
+	if ( -e ".cp-tmp" ) then
+            echo "Copying files ..."
+            echo ""
+            cat    .cp-tmp
+            echo ""
+            source .cp-tmp
+
+
+            #
+            # add group $GRP to library
+            #
+	    if ($PGSRLIB != "YES") then
+		echo "Adding $GRP files to library ..."
+		ar r $PGSLIB/libPGSTK.a tmp/*
+	    else
+		echo "Adding $GRP files to library ..."
+		ar r $PGSLIB/libPGSTK_r.a tmp/*
+	    endif
+            #
+            # clean up
+            # set MADE_A_LIB to 1,
+	    # this indicates at least one successful
+ 	    # change was made to libPGSTK.a
+	    # 
+
+            echo "Cleaning up ${GRP}..."
+            rm -rf tmp .cp-tmp
+            echo ""
+	    set MADE_A_LIB=1
+	else
+	    if ( `echo $tmp_PGSFILES | wc -l` > 0 ) then
+		echo "$GRP is up to date"
+		echo ""
+		set UpToDate=1
+	    else
+		echo "no PGS files in $GRP"
+		echo ""
+	    endif
+	
+            rm -rf tmp
+        endif
+    else  
+	if ($PGSRLIB == "YES" ) then
+	  echo "$PGSOBJ/$GRP does not exist: cannont add $GRP to libPGSTK_r.a"
+	else
+	  echo "$PGSOBJ/$GRP does not exist: cannont add $GRP to libPGSTK.a"
+	endif
+    endif
+end
+
+#    
+# if at least one successful change
+# was made to libPGSTK.a then set
+# the appropriate permissions and quit
+# otherwise move original library back
+#
+
+if ($?MADE_A_LIB) then
+  if ($PGSRLIB == "YES" ) then
+    if ($BRAND == "sun4") then
+      ranlib ${PGSLIB}/libPGSTK_r.a
+    endif
+    chmod 666 ${PGSLIB}/libPGSTK_r.a
+  else 
+    if ($BRAND == "sun4" || $BRAND == "macintosh" || $BRAND == "macintel" || $BRAND == "macintel32" || $BRAND == "macintel64") then
+        ranlib ${PGSLIB}/libPGSTK.a
+    endif
+    chmod 666 ${PGSLIB}/libPGSTK.a
+  endif
+    switch ( $BRAND )
+	case sgi:
+	case sgi32:
+        case irix65:
+	case sgi64:
+	    sleep 1   # because the SGI gets confused
+	breaksw
+    endsw
+    echo ""
+    echo "Done."
+    echo ""
+else
+  if ($PGSRLIB == "YES"  ) then
+    if ($?UpToDate != 0) then
+      echo ""
+      echo "$PGSLIB/libPGSTKr.a is up to date"
+    else
+      echo ""
+      echo "failed to create new library"
+    endif
+    if ( -e ${PGSLIB}/libPGSTKr.a.old && $?MAKE_BACKUP != 0 ) then
+	echo "restoring old library..."
+        mv libPGSTK_r.a.old libPGSTK_r.a
+    endif
+  else
+    if ($?UpToDate != 0) then
+      echo ""
+      echo "$PGSLIB/libPGSTK.a is up to date"
+    else
+      echo ""
+      echo "failed to create new library"
+    endif
+
+    if ( -e ${PGSLIB}/libPGSTK.a.old && $?MAKE_BACKUP != 0 ) then
+	echo "restoring old library..."
+        mv libPGSTK.a.old libPGSTK.a
+    endif
+  endif
+  echo ""
+  echo "Done."
+  echo ""
+endif
+

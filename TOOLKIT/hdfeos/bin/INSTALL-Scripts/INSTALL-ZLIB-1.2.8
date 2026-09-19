@@ -1,0 +1,621 @@
+#! /bin/sh
+#-----------------------------------------------------------------------------
+# filename:
+# 	INSTALL-ZLIB-1.2.8
+#
+# description:
+# 	Installation script module for installing ZLIB-1.2.8
+# 	for the SDP (PGS) Toolkit and hdfeos.  
+#       It implements patches to the NCSA 
+# 	installation procedure to allow for trouble-free installation on
+# 	the platforms supported by the SDP (PGS) Toolkit and hdfeos.
+#
+# usage:
+# 	Called from INSTALL-ZLIB
+#
+# 	INSTALL-ZLIB-1.2.8 -h[elp]
+#
+# 	  -h      : display this help message and exit
+# 	  -dbug   : install debug version of ZLIB 
+#
+# notes:
+# 	This is NOT a standalone script.  It is only intended to be run
+# 	by INSTALL-ZLIB, the ZLIB installation script.
+# 
+# author:
+#        Mike Sucher / Applied Research Corp.
+#        Abe Taaheri / L-3 comm. GSI
+#        Adura Adekunjo / L-3 comm. GSI
+#
+# history:
+#       26-Mar-2004 AA Used INSTALL-SZIP1.1 as template for INSTALL-ZLIB-1.2.1
+#       20-July-2010 AT Created this file for INSTALL-ZLIB-1.2.5
+#       27-Jan-2014 AT  Updated for ZLIB-1.2.8
+#-----------------------------------------------------------------------------
+
+
+#
+# Save starting directory, path
+# Create error message header
+#
+
+start_dir=`pwd`
+start_path=$PATH
+this_script="`basename $0`"
+script_error="$this_script: Error:"
+
+#
+# Get absolute pathname where this script is located
+# This allows the script to locate any needed auxilliary files
+#
+
+script_dir="`dirname $0`"
+abs="`echo $script_dir | cut -c1`"
+if [ "$abs" != "/" ] ; then
+    script_dir=`cd $script_dir;pwd`
+fi
+
+
+#****************************************************************
+#                                                               *
+#                   * * * Functions  * * *                      *
+#                                                               *
+#****************************************************************
+
+#
+# Function to output error message
+#
+
+WriteError()
+{
+    echo ""
+    echo "${this_script}: Error: $*"  >&2
+}
+
+
+#
+# Function to output message to logfile and console
+#
+
+EchoAndLog()
+{
+    if [ "$1" = "-n" ] ; then		# -n: suppress leading blank line
+        shift
+    else
+        echo ""
+        if [ "$log_file" != "" ] ; then
+            echo "" >> $log_file
+        fi
+    fi
+    
+    echo "$*"
+    if [ "$log_file" != "" ] ; then
+         echo "$*" >> $log_file
+    fi
+}
+
+
+#
+# Function to prompt for user response
+#
+
+UserPrompt()
+{
+    if [ "$BRAND" = "linux" ] || [ "$BRAND" = "linux32" ] || [ "$BRAND" = "linux64" ] ; then
+	/bin/echo "$* \c" > /dev/tty
+    else
+	echo "$* \\c" > /dev/tty
+    fi
+    read user_response
+}
+
+
+#
+# Function to output help message and exit
+#
+
+Help()
+{
+    sed -n '/filename:/,/author:/p' $0 | grep -v "author:" | cut -c3-300 | more
+    #this line must be here because it contains the string: "author:"
+    exit
+}
+
+
+#
+# Function to silently emulate the 'which' command 
+#
+
+Which()
+{
+    if [ "$1" = "" ] ; then 
+        WriteError "Which() : Too few arguments." 
+        exit 1 
+    fi
+
+    saveifs="$IFS"
+    IFS=:
+    which_result=0
+    which_cmd=""
+    
+    for dir in $PATH;  do 
+        if [ -x $dir/$1 ] ; then 
+            which_result=1 
+            which_cmd=$dir/$1
+            break 
+        fi 
+    done
+    
+    IFS="$saveifs"
+}
+
+#
+# Function to set compilers, overriding the NCSA compiler defaults
+#
+    
+SetCompilers()
+{
+    #
+    # Set C compiler based on value of $CC
+    # Set C compilation flags based on value of $CFLAGS
+    # Set FORTRAN compiler based on value of $F77
+    # 
+    # NOTE: 
+    #     This is done recursively for ALL Makefiles because on some
+    #     platforms, the compiler variables are not inherited from the
+    #     the calling Makefile.
+
+
+    EchoAndLog "Overriding NCSA default compiler settings:"
+
+    files=`find . -name Makefile -print`
+
+    if [ "$CC" != "" ] ; then
+
+        if [ "$CFLAGS" = "" ] ; then
+
+            EchoAndLog -n "- setting C compiler to '$CC'"
+            EchoAndLog -n "- setting FORTRAN compiler to '$F77'"
+             
+            for file in $files ; do
+            
+                if [ ! -f $file.ncsa.default ] ; then
+                    mv  $file $file.ncsa.default
+                fi
+
+                cat $file.ncsa.default |
+#                sed '/^CC/s/=.*$'"/= $CC/" | 
+#                sed '/^FC/s/=.*$'"/= $F77/" |
+                cat > $file.ncsa
+
+                cp $file.ncsa $file
+
+            done
+
+        else
+
+            EchoAndLog -n "- setting C compiler to '$CC'"
+            if [ "$CFLAGS" = "-O" ] ; then
+                EchoAndLog -n "- setting C compilation flags to default"
+            else
+                EchoAndLog -n "- setting C compilation flags to '$CFLAGS'"
+            fi
+            EchoAndLog -n "- setting FORTRAN compiler to '$F77'"
+             
+           for file in $files ; do
+
+                if [ ! -f $file.ncsa.default ] ; then
+                    mv  $file $file.ncsa.default
+                fi
+
+                cat $file.ncsa.default |
+#                sed '/^CC/s/=.*$'"/= $CC/" | 
+#                sed '/^CFLAGS/s/=.*$'"/= $CFLAGS/" |
+#                sed '/^FC/s/=.*$'"/= $F77/" |
+                cat > $file.ncsa
+
+                cp $file.ncsa $file
+
+            done
+
+        fi
+
+    else
+
+        EchoAndLog "Warning: Environment variable(s) CC and/or F77 not set."
+        EchoAndLog "If CC is not set, the installation uses NCSA defaults."
+
+    fi
+
+}
+
+
+PreConfigZLIBFixes_mac()
+
+{
+    cd $start_dir
+
+    EchoAndLog "Pre-configure ZLIB fixes for $BRAND ... "
+    echo " "
+    file=$start_dir/configure
+
+    if [ ! -f $file.ncsa.default ] ; then
+	mv  $file $file.ncsa.default
+    fi
+
+    sed "s^libdir='/usr/lib'^libdir='DOLLAR{prefix}/lib'^g" $file.ncsa.default > $file
+    mv $file $file.ncsa.default
+    sed "s^includedir='/usr/include'^includedir='DOLLAR{prefix}/include'^g" $file.ncsa.default > $file
+    mv $file $file.ncsa.default
+    sed 's^DOLLAR^$^g' $file.ncsa.default > $file
+    /bin/chmod 0755 $file
+    /bin/rm -f $file.ncsa.default
+
+    cd $start_dir
+}
+
+#
+# Function to do architecture-specific pre-configure fixes
+#
+    
+PreConfigure()
+{
+
+    cd $start_dir
+
+    if [ "$dbug" = "1" ] ; then
+	PreConfigFixes_dbug
+    fi
+
+    #
+    # Call architecture-specific functions
+    #
+
+    case $BRAND in
+    
+        cray  ) ;;
+    
+        dec   ) ;;
+    
+        hp    ) ;;
+    
+        ibm   ) ;;
+
+        linux ) ;;
+
+        linux32 ) ;;
+
+        linux64 ) ;;
+
+        macintosh ) ;;
+    
+        macintel ) ;;
+        
+        macintel32 ) ;;
+        
+        macintel64 ) ;;
+    
+        sgi   ) ;;
+    
+        sgi32 ) ;;
+
+        sgi64 ) ;;
+    
+        sun4  ) ;;
+    
+        sun5  ) ;;
+
+        sun5.8  ) ;;
+
+        sun5.9  ) ;;
+
+        sun5.10  ) ;;
+    
+        *     ) WriteError "Architecture $BRAND is not supported."
+                exit 1 ;;
+    
+    esac
+
+    cd $start_dir
+
+}
+
+
+#
+# Function to do architecture-specific post-configure fixes
+#
+    
+PostConfigure()
+{
+    cd $start_dir
+    
+    
+    #
+    # Check for missing tbl and neqn, patching as needed
+    #
+
+#    PostConfigFixes_NoTblNeqn
+
+
+    #
+    # Do architecture-specific fixes
+    #
+
+    case $BRAND in
+    
+        cray  ) ;;
+    
+        dec   ) ;;
+    
+        hp    ) ;;
+    
+        ibm   ) ;;
+
+        ibm   ) ;;
+
+        linux ) ;;
+
+        linux32 ) ;;
+
+        linux64 ) ;;
+
+        macintosh ) ;;
+
+        macintel ) ;;
+
+        macintel32 ) ;;
+
+        macintel64 ) ;;
+
+	cygwin ) ;;
+    
+        sgi   ) ;;
+    
+        sgi32 ) ;;
+
+        sgi64 ) ;;
+    
+        sun4  ) ;;
+    
+        sun5  ) ;;
+
+        sun5.8  ) ;;
+    
+        sun5.9  ) ;;
+
+        sun5.10  ) ;;
+
+        *     ) WriteError "Architecture $BRAND is not supported."
+                exit 1 ;;
+    
+    esac
+
+    
+    #
+    # If requested, set compilers to something other than the defaults
+    #
+
+    if [ $set_compilers = 1 ] ; then
+        SetCompilers
+    fi
+
+    cd $start_dir
+}
+
+
+
+#****************************************************************
+#                                                               *
+#                  * * * Main Program  * * *                    *
+#                                                               *
+#****************************************************************
+
+#
+# Get arguments from command line
+#
+
+set_compilers=0
+config_flags=""
+dbug=0
+
+while [ "$1" != "" ] ; do 
+
+    case "$1" in
+
+      -h | help ) Help ;;
+
+      -set_compilers ) set_compilers=1 ;;
+
+      -dbug ) dbug=1 ;;
+
+      -start_dir ) 
+          if [ "$2" != "" ] ; then
+              start_dir=$2
+              shift
+          else
+              WriteError "No installation directory specified with -start_dir switch."
+              Help
+          fi
+        ;;
+
+
+      * ) echo "$script_error invalid argument '$1'" ; Help ;;
+
+    esac
+
+    shift
+
+done
+
+
+#
+# Make sure we're not running standalone
+#
+
+if [ "$zlib_install_caller" = "" ] ; then
+
+    WriteError "This script can only be run from INSTALL-ZLIB."
+    Help
+
+else
+
+    # Here we set up the ZLIB installation directory,
+    # for use by the configure script.  
+    # 
+
+    install_dir="$ZLIBHOME"
+
+    if [ ! -d "$install_dir" ] ; then 	# create the install dir, if needed.
+        mkdir $install_dir
+    fi
+
+fi
+
+
+
+#
+# Announce
+#
+
+EchoAndLog "Running $this_script"
+
+if [ "$BRAND" = "macintosh" ] || [ "$BRAND" = "macintel" ] ; then
+PreConfigZLIBFixes_mac
+fi
+
+#
+# Run the NCSA-supplied configure script
+#
+
+cd $start_dir
+
+tmp_home=$HOME			# save $HOME
+HOME=`pwd` ; export HOME	# change it to avoid interaction w/ .cshrc
+
+if [ "$BRAND" = "linux" ] || [ "$BRAND" = "linux32" ] || [ "$BRAND" = "linux64" ]  ; then
+	EchoAndLog "Running ./configure --prefix=$install_dir $config_flags"
+else
+	EchoAndLog "Running ./configure --prefix=$install_dir $config_flags"
+fi
+
+if [ "$log_file" != "" ] ; then
+    echo "" >> $log_file
+	if [ "$BRAND" = "linux" ] || [ "$BRAND" = "linux32" ] || [ "$BRAND" = "linux64" ] ; then
+	./configure --prefix=$install_dir $config_flags >> $log_file 2>&1
+	else
+	./configure --prefix=$install_dir $config_flags >> $log_file 2>&1
+	fi
+else
+    echo ""
+	if [ "$BRAND" = "linux" ] || [ "$BRAND" = "linux32" ] || [ "$BRAND" = "linux64" ] ; then
+	./configure --prefix=$install_dir $config_flags
+	else
+	./configure --prefix=$install_dir $config_flags
+	fi
+fi
+
+HOME=$tmp_home ; export HOME	# restore $HOME
+
+
+#
+# Do architecture-specific post-configure fixes
+#
+
+
+PostConfigure
+
+
+#
+# Run the make utility to compile the library and utiltites
+#
+
+EchoAndLog "Running make, target=all"
+
+if [ "$log_file" != "" ] ; then
+    echo "" >> $log_file
+    make >> $log_file 2>&1
+    tmp_status=$?
+else
+    echo ""
+    make
+    tmp_status=$?
+fi
+
+if [ "$tmp_status" != 0 ] ; then
+    EchoAndLog "Run of 'make' failed."
+    exit 1
+fi
+
+
+EchoAndLog "Running make, target=test"
+
+if [ "$log_file" != "" ] ; then
+    echo "" >> $log_file
+    make test>> $log_file 2>&1
+    tmp_status=$?
+else
+    echo ""
+    make test
+    tmp_status=$?
+fi
+
+if [ "$tmp_status" != 0 ] ; then
+    EchoAndLog "Run of 'make all' failed."
+    exit 1
+fi
+
+
+
+#
+# Run the make utility install the libraries, utilities, includes and man pages 
+#
+
+if [ "$BRAND" = "macintosh" ] ; then
+   /bin/mkdir $ZLIBHOME/include
+   /bin/mkdir $ZLIBHOME/lib
+fi
+
+if [ "$BRAND" = "macintel" ] ; then
+   /bin/mkdir $ZLIBHOME/include
+   /bin/mkdir $ZLIBHOME/lib
+fi
+
+if [ "$BRAND" = "ibm" ] ; then
+   /bin/mkdir $ZLIBHOME/include
+   /bin/mkdir $ZLIBHOME/lib
+fi
+
+EchoAndLog "Running make, target=install "
+
+if [ "$log_file" != "" ] ; then
+    echo "" >> $log_file
+    make install >> $log_file 2>&1
+    tmp_status=$?
+else
+    echo ""
+    make install
+    tmp_status=$?
+fi
+
+
+if [ "$tmp_status" != 0 ] ; then
+    if [ "$BRAND" = "cygwin" ] ; then
+	EchoAndLog "Run of 'make install' failed.But it was completed in the install script."
+	if [ -f $ZLIBHOME/lib/libz.a ] ; then
+	    if [ ! -d $ZLIBHOME/include ] ; then
+		EchoAndLog "Creating $ZLIBHOME/include directory."
+		mkdir -p $ZLIBHOME/include
+	    fi
+	    cp zlib.h $ZLIBHOME/include/.
+	    cp zconf.h $ZLIBHOME/include/.
+	    chmod 644 $ZLIBHOME/include/zlib.h $ZLIBHOME/include/zconf.h
+	    ranlib $ZLIBHOME/lib/libz.a
+	else
+	    EchoAndLog "Run of 'make install' failed."
+	    exit 1
+	fi
+    else
+	EchoAndLog "Run of 'make install' failed."
+	exit 1
+    fi
+fi

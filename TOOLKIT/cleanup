@@ -1,0 +1,21 @@
+#!/bin/ksh
+#cleanup.ksh
+for dir in $*
+do
+  cd $dir;
+     for file in *
+      do
+
+           if [[ -f $file ]] ; then      
+             set -A V  "`cleartool ls $file`"
+              print ${V[1]}
+                 if  [[ "$V" = *CHECKEDOUT ]] ; then
+                  set U = "`cleartool unco -rm $file`"
+               else
+                 echo $file is not checked out
+                fi
+            fi
+        done
+    cd ..;
+    pwd;
+   done

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This is a place holder for generic types used by ALL TYPES of ECS granules (Science, Browse, PH, -->
+<!-- QA and DAP).                                                                                     -->
+<!--**************************************************************************************************-->
+<!-- Subsequent modifications to this schema MUST be described in comments below this line.           -->
+<!--**************************************************************************************************-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:include schemaLocation="CommonTypes.xsd"/>
+	<xs:element name="ECSDataGranule">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="SizeMBECSDataGranule" minOccurs="0"/>
+				<xs:element ref="ReprocessingPlanned" minOccurs="0"/>
+				<xs:element ref="ReprocessingActual" minOccurs="0"/>
+				<xs:element ref="LocalGranuleID" minOccurs="0"/>
+				<xs:element ref="DayNightFlag" minOccurs="0"/>
+				<xs:element ref="ProductionDateTime" minOccurs="0"/>
+				<xs:element ref="LocalVersionID" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GranuleUR">
+		<xs:annotation>
+			<xs:documentation>This is the granule's universal reference identifier,  of the following form:  SC:[shortname].[versionid]:[dbid]. 
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:string"/>
+		</xs:simpleType>
+	</xs:element>
+	<xs:element name="DbID">
+		<xs:annotation>
+			<xs:documentation>This is the granule's Inventory database identifier.,  
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:long"/>
+		</xs:simpleType>
+	</xs:element>
+	<!-- Supported format enforced by the custom validator is: YYYY-MM-DD' 'HH:MM:SS -->
+	<xs:element name="InsertTime" type="ECSDateTime">
+		<xs:annotation>
+			<xs:documentation>
+			     The date and time a specific granule was inserted into the DPL.
+			</xs:documentation>
+			<xs:appinfo>xmlsvcs.validation.EcAmXvuDateValidator</xs:appinfo>
+		</xs:annotation>
+	</xs:element>
+	<!-- Supported format enforced by the custom validator is: YYYY-MM-DD' 'HH:MM:SS -->
+	<xs:element name="LastUpdate" type="ECSDateTime">
+		<xs:annotation>
+			<xs:documentation>
+			     The date and time a specific granule was last updated.
+  			</xs:documentation>
+			<xs:appinfo>xmlsvcs.validation.EcAmXvuDateValidator</xs:appinfo>
+		</xs:annotation>
+	</xs:element>
+	<!-- Supported format enforced by the custom validator is: YYYY-MM-DD' 'HH:MM:SS -->
+	<xs:element name="DeleteTime" type="ECSDateTime">
+		<xs:annotation>
+			<xs:documentation>
+			     The date and time a specific granule was deleted from the SDSRV ???
+			</xs:documentation>
+			<xs:appinfo>xmlsvcs.validation.EcAmXvuDateValidator</xs:appinfo>
+		</xs:annotation>
+	</xs:element>
+	<xs:element name="DataFiles">
+		<xs:complexType>
+			<xs:sequence maxOccurs="unbounded">
+				<xs:element ref="DataFileContainer"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="DataFileContainer">
+		<xs:complexType>
+			<xs:annotation>
+				<xs:documentation>Describes the distributed filename
+			</xs:documentation>
+			</xs:annotation>
+			<xs:sequence>
+				<xs:element ref="DistributedFileName"/>
+				<xs:element ref="FileSize"/>
+				<xs:element ref="ChecksumType" minOccurs="0"/>
+				<xs:element ref="Checksum" minOccurs="0"/>
+				<xs:element ref="ChecksumOrigin" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="DistributedFileName">
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:maxLength value="255"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+	<xs:element name="FileSize">
+		<xs:simpleType>
+			<xs:restriction base="xs:integer"/>
+		</xs:simpleType>
+	</xs:element>
+	<xs:element name="ChecksumType">
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:maxLength value="64"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+	<xs:element name="Checksum">
+		<xs:annotation>
+			<xs:documentation>Actual checksum for file.  Limited by DPL DB to 128 chars.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:maxLength value="128"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+	<xs:element name="ChecksumOrigin">
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:maxLength value="64"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+	<xs:element name="PHProduct">
+		<xs:complexType>
+			<xs:sequence maxOccurs="unbounded">
+				<xs:element ref="PHGranuleId"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="PHGranuleId" type="GranuleURType"/>
+	<xs:element name="QAProduct">
+		<xs:complexType>
+			<xs:sequence maxOccurs="unbounded">
+				<xs:element ref="QAGranuleId"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="QAGranuleId" type="GranuleURType"/>
+	<xs:element name="AncillaryInputGranules">
+		<xs:complexType>
+			<xs:sequence maxOccurs="unbounded">
+				<xs:element ref="AncillaryInputGranule"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="AncillaryInputGranule">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="AncillaryInputType"/>
+				<xs:element ref="AncillaryInputPointer"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="AncillaryInputType" type="AncillaryInputTypeType"/>
+	<xs:element name="AncillaryInputPointer">
+		<xs:simpleType>
+			<xs:restriction base="xs:string"/>
+		</xs:simpleType>
+	</xs:element>
+	<xs:element name="SizeMBECSDataGranule">
+		<xs:simpleType>
+			<xs:restriction base="xs:float"/>
+		</xs:simpleType>
+	</xs:element>
+	<xs:element name="BrowseProduct">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="BrowseGranuleId" minOccurs="1" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

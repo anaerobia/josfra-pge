@@ -1,0 +1,183 @@
+#!/bin/csh -f 
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: SetupSwath"
+./SetupSwath
+if ($status != 0) then
+echo " **** Error in: SetupSwath"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: DefineFields"
+./DefineFields
+if ($status != 0) then
+echo " **** Error in: DefineFields"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: WriteFields"
+./WriteFields
+if ($status != 0) then
+echo " **** Error in: WriteFields"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: AppendField"
+./AppendField
+if ($status != 0) then
+echo " **** Error in: AppendField"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: ReadFields"
+./ReadFields
+if ($status != 0) then
+echo " **** Error in: ReadFields"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: InquireSwath"
+./InquireSwath
+if ($status != 0) then
+echo " **** Error in: InquireSwath"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: SubsetSwath"
+./SubsetSwath
+if ($status != 0) then
+echo " **** Error in: SubsetSwath"
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: WriteDimscaleSwath"
+./WriteDimscaleSwath
+if ($status != 0) then
+echo " **** Error in: WriteDimscaleSwath"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: ReadDimscaleSwath"
+./ReadDimscaleSwath
+if ($status != 0) then
+echo " **** Error in: ReadDimscaleSwath"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: SetupGrid"
+./SetupGrid
+if ($status != 0) then
+echo " **** Error in: SetupGrid"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: DefineGDflds"
+./DefineGDflds
+if ($status != 0) then
+echo " **** Error in: DefineGDflds"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: WriteGDflds"
+./WriteGDflds
+if ($status != 0) then
+echo " **** Error in: WriteGDflds"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: InquireGrid"
+./InquireGrid
+if ($status != 0) then
+echo " **** Error in: InquireGrid"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: ReadGDflds"
+./ReadGDflds
+if ($status != 0) then
+echo " **** Error in: ReadGDflds"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: SubsetGrid"
+./SubsetGrid
+if ($status != 0) then
+echo " **** Error in: SubsetGrid"
+endif
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: WriteDimscaleGrid"
+./WriteDimscaleGrid
+if ($status != 0) then
+echo " **** Error in: WriteDimscaleGrid"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: ReadDimscaleGrid"
+./ReadDimscaleGrid
+if ($status != 0) then
+echo " **** Error in: ReadDimscaleGrid"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: SetupPoint"
+./SetupPoint
+if ($status != 0) then
+echo " **** Error in: SetupPoint"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: DefineLevels"
+./DefineLevels
+if ($status != 0) then
+echo " **** Error in: DefineLevels"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: WriteLevels"
+./WriteLevels
+if ($status != 0) then
+echo " **** Error in: WriteLevels"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: UpdateLevels"
+./UpdateLevels
+if ($status != 0) then
+echo " **** Error in: UpdateLevels"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: ReadLevels"
+./ReadLevels
+if ($status != 0) then
+echo " **** Error in: ReadLevels"
+endif
+echo " "
+echo " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo " "
+echo "Running: SubsetPoint"
+./SubsetPoint
+if ($status != 0) then
+echo " **** Error in:SubsetPoint "
+endif

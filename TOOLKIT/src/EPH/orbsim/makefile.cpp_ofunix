@@ -1,0 +1,197 @@
+#-------------------------------------------------------------------------#
+#                                                                         #
+#  COPYRIGHT[copyright mark] 2000, Raytheon System Company, its vendors,  #
+#  and suppliers.  ALL RIGHTS RESERVED.                                   #
+#                                                                         #
+#-------------------------------------------------------------------------#
+#----------------------------------------------------------------------------
+# file:		makefile for orbsim--orbit simulator (executable)
+#
+# environment:	MPPDE, machine-independent, PGS directory structure
+# 	
+# environment variables dependencies:
+#   compiler:  CC CFHFLAGS F77 F77_CFH
+#   includes:  PGSINC
+#   libraries: PGSLIB
+#   other:     PGSBIN PGSSRC
+#  
+# author:  Mike Sucher 
+#          Guru Tej S. Khalsa
+#          Megan E.D.Spencer
+#          Xin Wang
+#
+# history:
+#	13-Apr-1994 MES  Template version
+#	18-Apr-1994 MES  Pass all PGS env variables, and 
+# 			 call mkpgslib with $PGSHOME override
+#	01-Sep-1994 MES  Modified C and FORTRAN libs to use the 
+# 			 Release 3 library libPGSTK.a
+#       18-Sep-1994 GTSK Modified to build single executable "orbsim".
+#                        No longer builds liborbsim.a although that can
+#                        be done using the liborbsim target.  Stripped out
+#                        irrelavant FORTRAN stuff.
+#	03-Nov-1995 GTSK - Added $(ADD_IFLAGS) to IFLAG definition
+# 			 - Added $(ADD_LFLAGS) to LFLAG definition
+# 			 These allow additional directories in the include 
+# 			 and lib paths by setting environment variable.
+# 			 - Added $(ADD_LIBS) to LIBS definition which allows
+# 			 additional libraries to be added by setting an 
+# 			 environment variable.
+#       10-Feb-2002  XW  Modified to add hdf path
+#
+# notes:
+# 	1) This file is intended for use in the Multi-Platform PGS Development
+# 	   Environment (MPPDE).  It depends on the PGS-defined toolkit 
+# 	   directory structure, and on environmental variables defined
+# 	   by MPPDE startup files.  This is how machine independence
+# 	   is maintained.
+# 	2) Target executable files are moved to $PGSBIN.
+# 	3) Target object files are moved to $(PGSOBJ)/$(GRP).
+# 	4) This file does NOT build the library for this group.
+#	   That is handled by the group-level makefile.
+#
+#----------------------------------------------------------------------------
+
+#
+# set the name of this tool group
+#
+
+GRP= EPH
+
+# force make to use the 'sh' shell
+SHELL = /bin/sh
+
+# name of remove utility
+RM= /bin/rm
+RMFLAGS= -rf 
+MFLAGS2= -f makefile.cpp_ofunix
+
+DFLAGS = -D$(HDFSYS)
+XMLINC = $(PGSHOME)/include/libxml
+XSLINC = $(PGSHOME)/include/libxslt
+# MAC needs iconv library because of added xml code
+ICONVLIB = $(PGSLIB)/iconvlib/lib
+
+# path for #include directive
+IFLAG   = -I$(PGSINC) $(ADD_IFLAGS) -I$(HDFINC) -I$(HDF5INC) -I$(SZIPINC)
+
+# path for libraries linked (compiler will search in the order listed)
+LFLAG	= -L$(PGSLIB) $(ADD_LFLAGS) -L$(HDFLIB) -L$(HDF5LIB) -L$(SZIPLIB) -L$(ZLIBLIB) -L$(JPEGLIB) 
+LFLAG_ICONV   = -L$(PGSLIB) $(ADD_LFLAGS) -L$(HDFLIB) -L$(ZLIBLIB) -L$(JPEGLIB) -L$(HDF5LIB) -L$(SZIPLIB) -L$(ICONVLIB)
+
+# libraries linked for C build
+LIBS       = -lPGSTKcpp $(ADD_LIBS) -lmfhdf -ldf -ljpeg $(HDF5LIB)/libhdf5.a -lz $(SZIPLIB)/libsz.a  -lm -ldl
+LIBS_DEC   = -lPGSTKcpp $(ADD_LIBS) -lmfhdf -ldf  $(JPEGLIB)/libjpeg.a $(HDF5LIB)/libhdf5.a -lz $(SZIPLIB)/libsz.a  -lm -ldl
+LIBS_CYGWIN = -lPGSTKcpp $(ADD_LIBS) -lmfhdf -ldf -ljpeg $(HDF5LIB)/libhdf5.a -lz $(SZIPLIB)/libsz.a  -lm  -liconv.dll
+LIBS_MACINTOSH = -lPGSTKcpp $(ADD_LIBS) $(ECS_TOOLKIT_LIBS) -lmfhdf -ldf -ljpeg $(HDF5LIB)/libhdf5.a -lz $(SZIPLIB)/libsz.a -lm -ldl -liconv
+LIBS_MACINTEL = -lPGSTK $(ADD_LIBS) $(ECS_TOOLKIT_LIBS) -lpthread -lmfhdf -ldf -ljpeg $(HDF5LIB)/libhdf5.a -lz $(SZIPLIB)/libsz.a -lm -ldl /usr/lib/libiconv.dylib
+#
+# object files from this sub-group needed to build library
+#
+
+SRCFILES	=  			\
+	PGS_EPH_TransformBodyRates.c	\
+	PGS_EPH_attOrbSim.c		\
+	PGS_EPH_attitudeNoise.c		\
+	PGS_EPH_getQuats.c		\
+	PGS_EPH_matrixMultiply.c	\
+	PGS_EPH_orbSim.c		\
+	PGS_EPH_orbitalElements.c	\
+	orbsim.c
+
+OBJFILES	=  \
+	$(PGSCPPO)/$(GRP)/PGS_EPH_TransformBodyRates.o	\
+	$(PGSCPPO)/$(GRP)/PGS_EPH_attOrbSim.o		\
+	$(PGSCPPO)/$(GRP)/PGS_EPH_attitudeNoise.o	\
+	$(PGSCPPO)/$(GRP)/PGS_EPH_getQuats.o		\
+	$(PGSCPPO)/$(GRP)/PGS_EPH_matrixMultiply.o	\
+	$(PGSCPPO)/$(GRP)/PGS_EPH_orbSim.o		\
+	$(PGSCPPO)/$(GRP)/PGS_EPH_orbitalElements.o	\
+	$(PGSCPPO)/$(GRP)/orbsim.o
+
+#
+# targets
+#
+
+all: $(PGSBIN)/orbsim $(PGSBIN)/chkeph
+
+utilities: all
+
+obj_dir:
+	@if [ ! -d $(PGSCPPO)/$(GRP) ] ; then	\
+		mkdir $(PGSCPPO)/$(GRP);	        \
+	fi
+
+obj_files: $(OBJFILES)
+
+$(PGSBIN)/orbsim: $(SRCFILES) $(PGSLIB)/libPGSTKcpp.a
+	@$(MAKE) $(MFLAGS) $(MFLAGS2) obj_dir obj_files
+	@if [ $(BRAND) = "sun5" -o $(BRAND) = "sun4" -o $(BRAND) = "sun5.8" -o $(BRAND) = "sun5.9" -o $(BRAND) = "sun5.10" ] ; then \
+		$(CPP) $(CPPFHFLAGS) $(DFLAGS) $(LFLAG) $(OBJFILES) -o $@ $(LIBS) -lnsl -lsocket; \
+	elif [ $(BRAND) = "dec" ] ; then \
+		$(CPP) $(CPPFHFLAGS) $(DFLAGS) $(LFLAG) $(OBJFILES) -o $@ $(LIBS_DEC) ; \
+	elif [ $(BRAND) = "cygwin" ] ; then \
+		$(CPP) $(CPPFHFLAGS) $(DFLAGS) $(LFLAG_ICONV) $(OBJFILES) -o $@ $(LIBS_CYGWIN) ; \
+        elif [ $(BRAND) = "macintosh" ] ; then \
+                 $(CPP) $(CPPFHFLAGS) $(DFLAGS) $(LFLAG_ICONV) $(OBJFILES) -o $@ $(LIBS_MACINTOSH) ; \
+        elif [ $(BRAND) = "macintel" ] ; then \
+                 $(CPP) $(CPPFHFLAGS) $(DFLAGS) $(LFLAG_ICONV) $(OBJFILES) -o $@ $(LIBS_MACINTEL) ; \
+        elif [ $(BRAND) = "macintel32" ] ; then \
+                 $(CPP) $(CPPFHFLAGS) $(DFLAGS) $(LFLAG_ICONV) $(OBJFILES) -o $@ $(LIBS_MACINTEL) ; \
+        elif [ $(BRAND) = "macintel64" ] ; then \
+                 $(CPP) $(CPPFHFLAGS) $(DFLAGS) $(LFLAG_ICONV) $(OBJFILES) -o $@ $(LIBS_MACINTEL) ; \
+	elif [ $(BRAND) = "hp" ] ; then \
+		if [ `/bin/uname -r | cut -d. -f2` = "11" ]; then \
+			$(CPP) $(CPPFHFLAGS) $(DFLAGS) $(LFLAG) $(OBJFILES) -o $@ $(LIBS) -lnsl ; \
+		else \
+			$(CPP) $(CPPFHFLAGS) $(DFLAGS) $(LFLAG) $(OBJFILES) -o $@ $(LIBS) ; \
+		fi; \
+	else \
+		$(CPP) $(CPPFHFLAGS) $(DFLAGS) $(LFLAG) $(OBJFILES) -o $@ $(LIBS) ; \
+	fi ;
+
+$(PGSBIN)/chkeph: chkeph.c $(PGSLIB)/libPGSTKcpp.a
+	$(CPP) $(CPPFHFLAGS) $(DFLAGS) $(IFLAG) $(LFLAG) chkeph.c -o $@ $(LIBS)
+
+silent_clean:
+	@$(RM) $(RMFLAGS) $(PGSCPPO)/$(GRP)/*.o $(PGSCPPO)/$(GRP)/core 
+
+clean:
+	$(RM) $(RMFLAGS) $(PGSCPPO)/$(GRP)/core $(PGSCPPO)/$(GRP)/*.o
+
+#
+# compilation rules
+#
+
+$(PGSCPPO)/$(GRP)/PGS_EPH_TransformBodyRates.o: PGS_EPH_TransformBodyRates.c
+	$(CPP) -c $(CPPFHFLAGS) $(DFLAGS) $(IFLAG) $? -o $@
+
+$(PGSCPPO)/$(GRP)/PGS_EPH_attOrbSim.o: PGS_EPH_attOrbSim.c
+	$(CPP) -c $(CPPFHFLAGS) $(DFLAGS) $(IFLAG) $? -o $@
+
+$(PGSCPPO)/$(GRP)/PGS_EPH_attitudeNoise.o: PGS_EPH_attitudeNoise.c
+	$(CPP) -c $(CPPFHFLAGS) $(DFLAGS) $(IFLAG) $? -o $@
+
+$(PGSCPPO)/$(GRP)/PGS_EPH_getQuats.o: PGS_EPH_getQuats.c
+	$(CPP) -c $(CPPFHFLAGS) $(DFLAGS) $(IFLAG) $? -o $@
+
+$(PGSCPPO)/$(GRP)/PGS_EPH_matrixMultiply.o: PGS_EPH_matrixMultiply.c
+	$(CPP) -c $(CPPFHFLAGS) $(DFLAGS) $(IFLAG) $? -o $@
+
+$(PGSCPPO)/$(GRP)/PGS_EPH_orbSim.o: PGS_EPH_orbSim.c
+	$(CPP) -c $(CPPFHFLAGS) $(DFLAGS) $(IFLAG) $? -o $@
+
+$(PGSCPPO)/$(GRP)/PGS_EPH_orbitalElements.o: PGS_EPH_orbitalElements.c
+	$(CPP) -c $(CPPFHFLAGS) $(DFLAGS) $(IFLAG) $? -o $@
+
+$(PGSCPPO)/$(GRP)/orbsim.o: orbsim.c
+	$(CPP) -c $(CPPFHFLAGS) $(DFLAGS) $(IFLAG) $? -o $@
+
+
+# compile Toolkit binaries
+.c:
+	@$(MAKE) $(MFLAGS) $(MFLAGS2) $(PGSBIN)/$@
+
+# compile C to object
+.c.o:
+	@$(MAKE) $(MFLAGS) $(MFLAGS2)  obj_dir $(PGSCPPO)/$(GRP$)/$@

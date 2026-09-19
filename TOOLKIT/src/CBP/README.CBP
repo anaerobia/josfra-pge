@@ -1,0 +1,121 @@
+******************************************************************************
+This README file created by Peter Noerdlinger April 20, 1994
+to provide traceability of our data source.  Users interested
+in further details about the JPL ephemerides should consult the
+files listed at the end of this document, all of which can 
+be obtained by anonymous FTP  from "navigator.jpl.nasa.gov".
+
+******************************************************************************
+
+   JPL PLANETARY AND LUNAR EPHEMERIDES : EOSDIS VERSION 
+
+   Obtained by FTP from the server navigator.jpl.nasa.gov
+
+   on April 5, 1994. 
+
+   Directory            File Type        length         file name
+
+   /ephem/export/ascii   ascii          17701056        de200.dat
+
+   on February 27, 2017
+   Abe Taaheri updated the file to add another 20 years of data to it. 
+
+   database/common/CBP   ascii          22887657        de200.dat
+
+   Date file stored by JPL:  Apr  5 23:51
+
+Data from head of file:
+
+	KSIZE= 1652    NCOEFF=  826
+ 
+	GROUP   1010
+ 
+        JPL Planetary Ephemeris DE200/DE200
+        Start Epoch: JED=  2433264.5 1949 DEC 14 00:00:00 
+        Final Epoch: JED=  2466543.5 2041 JAN 24 00:00:00 
+ 
+    Translated from ascii to binary with the JPL program:
+
+    PGS_CBP_EPH_asc2eph.f  by Edmund Larson, Peter Noerdlinger, and
+    Marek Chmielowski with
+               the reduced Julian Date range:
+
+       		T1 = 2436175.5D0
+       		T2 = 2459215.5D0
+
+	(  Dec 2, 1957  0 hrs to  Jan 1, 2021  0 hrs  )
+  
+  The filename used by EOSDIS for this version, in binary, is:
+
+  de200.EOS and is located in $PGSLIB/database/EPH directory
+
+  These ephemerides are used for the retrieval of the ephemeris data: 
+  cartesian coordinates of the major planets, moon and sun at any 
+  requested time (JED) covered by the ephemeris.
+
+  The original ephemeris on which de200.EOS is based is a J2000-based
+  ephemeris:  de200 , running from JED2305424.5  (1599 DEC 09)  to  
+  JED 2513360.5  (2169 MAR 31).   The EOS version de200.EOS was checked
+  against the jpl test data file "testpo.200" and performed identically
+  with the full de200, with the exception that on the SGI platform 
+  de200.EOS showed a sprinkling of error of one part in 1e13 where
+  the full epehemeris did not.  The error is insignificant, but the
+  matter is under study.
+
+  The original version is so large that it was deemed unwieldy to
+  be sent with the PGS Toolkit.
+
+  The version supplied by the PGS Toolkit in April, 1994 is unlatered
+  other than by direct coding to binary with the jpl program.  In the
+  process its time span was slightly shortened.   It is anticipated 
+  that in the near future the EOSDIS ephemerides will be corrected for 
+  light travel time to the Earth and for aberration due to the Earth's 
+  orbital motion.  The two corrections will not exceed 1 minute arc.
+
+******************************************************************************
+
+The original JPL description of DE118 and DE 200 is:
+
+DE118: created in 1980, was based on the (1950) equator and equinox of the FK4.
+       It was used to create DE200.
+
+DE200: created from DE118 by rotating all coordinates onto the equator and 
+       equinox of J2000 (FK5).  This ephemeris has been the basis of the 
+       Astronomical Almanac since 1984. 
+
+The following references are pertinent:
+
+  Newhall,X X, Standish,E.M. and Williams,J.G.: 1983, "DE102: a numerically integrated 
+    ephemeris of the Moon and planets spanning forty-four centuries", Astronomy & 
+    Astrophysics, vol. 125, pp. 150-167.
+
+  Standish,E.M.: 1982, "Orientation of the JPL Ephemerides, DE200/LE200, to the Dynamical 
+    Equinox of J2000", Astronomy & Astrophysics, vol. 114, pp. 297-302.
+
+  Standish,E.M.: 1985, "Planetary and Lunar Ephemerides, DE125/LE125", JPL IOM 314.6-591.
+
+  Standish,E.M.: 1987, "Ephemerides, DE130/LE130 & DE202/LE202", JPL IOM 314.6-891.
+
+  Standish,E.M.: 1990, "The Observational Basis for JPL's DE200, the planetary ephemeris 
+    of the Astronomical Almanac", Astronomy & Astrophysics, vol. 233, pp. 252-271.
+
+  Standish,E.M.: 1991, "The JPL Planetary and Lunar Ephemerides DE234/LE234", 
+    JPL IOM 314.6-1348.
+******************************************************************************
+
+We are indebted to the Jet Propulsion Laboratory, and especially to
+E. Myles Standish and Faith A. McCreary for their assistance.
+
+******************************************************************************
+Further information about the original ephemerides:
+on "navigator.jpl.nasa.gov"  
+ 
+see the following files (parts of which
+are excerpted above)
+
+top-level directory /README.navigator
+
+
+directory  /ephem:  /ephem/READ.ME
+
+directory  /ephem/export:  /ephem/export/usrguide.unx

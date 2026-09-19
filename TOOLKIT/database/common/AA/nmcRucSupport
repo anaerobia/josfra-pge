@@ -1,0 +1,22 @@
+cacheFormat1	=	float
+cacheFormat2	=	 1
+cacheFormatBytes 	=	4
+parmMemoryCache	=	80352
+dataType	=	float
+autoOperation	=	2
+fileMemoryCache		=       160704
+maxLat	=	0.000
+minLat	=	0.000
+maxLong	=	0.000
+minLong	=	0.000	 
+xCells	=	81
+yCells	=	62
+zCells	=	4
+lowerLeftLat 	= 	22.8756
+lowerLeftLong	= 	239.5089
+meshLength	=	68153.0
+gridOrientation	= 	255.0
+funcIndex = 0
+swapBytes = no
+
+

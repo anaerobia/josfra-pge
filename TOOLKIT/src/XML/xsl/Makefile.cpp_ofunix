@@ -1,0 +1,184 @@
+#-----------------------------------------------------------------------------
+# file:		makefile for XSL tools 
+#		(for MET only)
+#
+# environment:	MPPDE, machine-independent, PGS directory structure
+# 	
+# environment variables dependencies:
+#   compiler:  CPP
+#   includes:  PGSINC
+#   libraries: PGSLIB
+#   other:     PGSBIN PGSSRC HDFSYS
+#  
+# author: Abe Taaheri / Raytheon
+#
+# history:
+#	01-May-2009 AT  Initial version
+#
+# notes:
+# 	1) This file is intended for use in the Multi-Platform PGS Development
+# 	   Environment (MPPDE) .  It depends on the PGS-defined toolkit 
+# 	   directory structure, and on environmental variables defined
+# 	   by MPPDE startup files.  This is how machine independence
+# 	   is maintained.
+# 	2) Target executable files are moved to $PGSBIN
+# 	3) Target object files are moved to $(PGSLIB)/obj/XML
+# 	4) To build the PGS CUC tools library, type 'make lib'
+#	   (This runs the script $PGSBIN/mkpgslib to build the library).
+#----------------------------------------------------------------------------
+
+#
+# set the name of this tool group
+#
+GRP = XML
+
+# define sh shell (needed for embedded shell scripts)
+SHELL=/bin/sh
+
+
+# Default target
+TARG=all
+
+# name of remove utility
+RM = /bin/rm
+RMFLAGS = -f 
+
+# note: some xml compilations with g++ results in error. Therefore
+# below we use MFLAGS insstead of MFLAGS2 at the end of os_type
+# This will compile XML files with gcc instaed og g++
+MFLAGS2 = -f Makefile.cpp_ofunix
+
+CFLAG1 =
+
+# define optimization level for comilation
+OPT_LEVEL = -O
+
+# define C preprocessor symbols 
+DFLAGS  = -DSUN_UNIX
+
+# path for #include directive
+IFLAG   = -I. $(ECS_TOOLKIT_INCLUDES) -I$(PGSINC) -I$(PGSINC)/libxslt -I$(PGSINC)/libxml
+
+# object files from this sub-group needed to build library  
+
+LIBOFILES = \
+	$(PGSCPPO)/$(GRP)/attrvt.o \
+	$(PGSCPPO)/$(GRP)/xslt.o \
+	$(PGSCPPO)/$(GRP)/xsltutils.o \
+	$(PGSCPPO)/$(GRP)/xslpattern.o \
+	$(PGSCPPO)/$(GRP)/templates.o \
+	$(PGSCPPO)/$(GRP)/variables.o \
+	$(PGSCPPO)/$(GRP)/keys.o \
+	$(PGSCPPO)/$(GRP)/numbers.o \
+	$(PGSCPPO)/$(GRP)/extensions.o \
+	$(PGSCPPO)/$(GRP)/extra.o \
+	$(PGSCPPO)/$(GRP)/functions.o \
+	$(PGSCPPO)/$(GRP)/namespaces.o \
+	$(PGSCPPO)/$(GRP)/imports.o \
+	$(PGSCPPO)/$(GRP)/attributes.o \
+	$(PGSCPPO)/$(GRP)/documents.o \
+	$(PGSCPPO)/$(GRP)/preproc.o \
+	$(PGSCPPO)/$(GRP)/transform.o \
+	$(PGSCPPO)/$(GRP)/security.o 
+
+
+#
+# targets
+#
+
+all:	message os_type
+
+os_type:
+	@cflag=$(CFLAG1);					\
+	if [ $(BRAND) = "hp" ] ; then 				\
+	    cflag="-Ae" ;					\
+	    echo "Compiling on HP.  NOTE: FLAG added." ;	\
+	fi ;							\
+	if [ $(BRAND) = "linux" ] ; then 			\
+	    cflag="-DLINUX" ;					\
+	    echo "Compiling on LINUX.  NOTE: FLAG added." ;	\
+	fi ;							\
+	if [ $(BRAND) = "linux64" ] ; then 			\
+	    cflag="-DLINUX64" ;					\
+	    echo "Compiling on LINUX64.  NOTE: FLAG added." ;	\
+	fi ;							\
+	if [ $(BRAND) = "linux32" ] ; then 			\
+	    cflag="-DLINUX" ;					\
+	    echo "Compiling on LINUX32.  NOTE: FLAG added." ;	\
+	fi ;							\
+        if [ $(BRAND) = "macintosh" ] ; then                        	\
+            cflag="-DMACINTOSH" ;                                   	\
+            echo "Compiling on Macintosh.  NOTE: FLAG added." ;     	\
+        fi ;                        	                 	    	\
+        if [ $(BRAND) = "macintel" ] ; then            	    		\
+            cflag="-DMACINTEL" ;                                   	\
+            echo "Compiling on Macintosh (Intel).  NOTE: FLAG added." ; \
+        fi ;                                             		\
+        if [ $(BRAND) = "cygwin" ] ; then            	    		\
+            cflag="-DCYGWIN" ;                                   	\
+            echo "Compiling on Cygwin.  NOTE: FLAG added." ; 		\
+        fi ;                        	                 	    	\
+	$(MAKE) $(MFLAGS2) all2 CFLAG1="$$cflag"
+
+all2: $(PGSLIB)/libPGSTKcpp.a
+
+$(PGSLIB)/libPGSTKcpp.a: $(LIBOFILES)
+	@$(PGSBIN)/mkpgslib.cpp $(GRP)
+
+dbug:
+	@$(MAKE) OPT_LEVEL=-g $(TARG)
+
+lib:
+	@${PGSBIN}/mkpgslib.cpp $(GRP)
+
+clean:
+	$(RM) $(RMFLAGS) core *.o $(LIBOFILES) $(PGSCPPO)/$(GRP)/*.o
+
+message:
+	@echo " Makefile.cpp_ofunix for group: $(GRP); Target: all"
+
+#
+# compilation rules
+
+
+$(PGSCPPO)/$(GRP)/attrvt.o: attrvt.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/xslt.o: xslt.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/xsltutils.o: xsltutils.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/xslpattern.o: xslpattern.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/templates.o: templates.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/variables.o: variables.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/keys.o: keys.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/numbers.o: numbers.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/extensions.o: extensions.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/extra.o: extra.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/functions.o: functions.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/namespaces.o: namespaces.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/imports.o: imports.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/attributes.o: attributes.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/documents.o: documents.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/preproc.o: preproc.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/transform.o: transform.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+$(PGSCPPO)/$(GRP)/security.o: security.c
+	$(CC) -c $(CFLAG1) $(OPT_LEVEL) $(DFLAGS) $(IFLAG) $? -o $@
+
+# force the default make rule to search for a specific make rule
+# for a given input file (i.e. target)
+.c.o:
+	$(MAKE) $(MFLAGS) $(MFLAGS2) $(PGSCPPO)/$(GRP)/$@

@@ -1,0 +1,641 @@
+#! /bin/ksh
+##############################################################################
+#                                                                            #
+# Name        : EcTkHdfEosMkcfg                                              #
+# Author      : Guru Tej S. Khalsa                                           #
+# Description : Configures HDF-EOS Installation                              #
+# Date        : Mar 12, 1998                                                 #
+#                                                                            #
+# Date       Who              What                                           #
+# ----       ---------        --------------------                           #
+# 03/12/1998 Guru Tej Khalsa  Initial version                                #
+# 04/09/1998 Robert Magill    Add scriptlib function call to set_environment #
+# 09/30/1998 Megan D Spencer  Updated to check for link existence            #
+#                                during mkcfg for NCR#ECSed15960             #
+# 11/06/1998 Megan D Spencer  Updated script so that recursive links are     #
+#                              taken out. NCR#19000                          #
+# 11/06/1998 Megan D Spencer  Updated so that the environment scripts are    #
+#                               current for DaacDeliver build.               #
+#                               NCR#ECSed17209, NCR#18994, NCR#18991         #
+# 09/07/1999 Damian Anderson  NCR ECSed20704: Return success/failure status. #
+# 04/22/2000 Yangling Hunag   NCR EcsSed24677 EcsSed24679                    #
+# 11/14/2000 Yangling Huang   NCR ECSed28955                                 #
+# 04/05/2001 Abe Taaheri      Modified for HDF5                              #
+# 05/14/2002 Adura Adekunjo   Changed hdf5-1.4.1 to hdf5-1.4.3               #
+# 04/15/2007 Abe Taaheri      Added more unsupported platforms               #
+##############################################################################
+
+# Export all variables
+set -o allexport
+
+[ $# -eq 0 ] && print "Usage: $0 MODE" && exit 1
+
+MODE=$1
+eval $(EcCoScriptlib set_environment $MODE)
+ARCH=$(EcCoScriptlib  get_architecture)
+# Make sure needed variables are set
+[ -z "$ECS_HOME"	] && NOTSET="$NOTSET ECS_HOME"
+
+[ ! -z "$NOTSET" ] && {
+	print "Re-run after setting the following environment variables:
+$NOTSET"
+	exit 1
+}
+
+SUBSYS=TOOLKIT
+CUSTOM=${ECS_HOME}/${MODE}/CUSTOM
+
+EcCoScriptlib check_dirs $CUSTOM || exit 1
+
+COMPONENT=EcTk
+eval $(EcCoScriptlib set_cfgparms $MODE $SUBSYS $COMPONENT $(basename $0))
+
+#########################
+#  T E J                #
+#########################
+
+# seriously hacked up script needs to be reworked to be more generic
+# and thoroughly commented
+
+# Check the value of the variable UseOldInstallMethod.
+
+# Historically the HDF-EOS package has been installed under the
+# sub-directory HDFEOS at the DAACs.  Under this directory is the $BRAND
+# directory and finally under this is the directory hdfeos. The hdfeos
+# directory, however, is set up to handle mulitple architectures.
+# Therefore there is not need to place the hdfeos directory beneath a
+# ${BRAND} directory.  The hdfeos directory can be placed directly beneath
+# the HDFEOS directory.  This script will do this unless the variable
+# UseOldInstallMethod has been set to "True".
+
+# The directory hierarchy looks as follows:
+#
+# ${CUSTOM}/HDFEOS/hdfeos
+# ${CUSTOM}/HDFEOS/hdfeos5
+#
+# The "old" directory hierarchy looks as follows:
+#
+# ${CUSTOM}/HDFEOS/${BRAND}/hdfeos
+# ${CUSTOM}/HDFEOS/${BRAND}/hdfeos5
+
+old_install=0
+typeset -u UseOldInstallMethod
+case "$UseOldInstallMethod" in
+    TRUE)
+	old_install=1
+	;;
+esac
+
+# Check the value of the variable InstallSgiLibs
+
+# If InstallSgiLibs is set to "False" then the various sgi versions of the
+# HDF-EOS libraries will be deleted during the "configuration".
+
+install_sgi=1
+typeset -u InstallSgiLibs
+case "$InstallSgiLibs" in
+    "FALSE")
+	install_sgi=0
+	;;
+esac
+keep_bckups=1
+typeset -u KeepBackUps
+case "$KeepBackUps" in
+    "FALSE")
+	keep_bckups=0
+	;;
+esac
+sun_only=1
+typeset -u SunOnlyTarFile
+case "$SunOnlyTarFile" in
+    "FALSE")
+        sun_only=0
+        ;;
+esac
+
+# Check the value of the variable InstallSunLib
+
+# If InstallSunLib is set to "False" then sun5 version of the HDF-EOS
+# library will be deleted during the "configuration".
+
+install_sun=1
+typeset -u InstallSunLib
+case "$InstallSunLib" in
+    "FALSE")
+	install_sun=0
+	;;
+esac
+
+# Check the value of the variable InstallOptLibs
+
+# If InstallOptLibs is set to "False" then the various optimized versions
+# of the HDF-EOS libraries (those HDF-EOS libraries (of any architecture)
+# built with compiler optimized objects) will be deleted during the
+# "configuration".
+
+install_opt=1
+typeset -u InstallOptimizedLibs
+case "$InstallOptimizedLibs" in
+    "FALSE")
+	install_opt=0
+	;;
+esac
+
+# Check the value of the variable InstallDebugLibs
+
+# If InstallDebugLibs is set to "False" then the various debug versions of
+# the HDF-EOS libraries (those HDF-EOS libraries (of any architecture) built
+# with source code debuggable objects) will be deleted during the
+# "configuration".
+
+install_dbug=1
+typeset -u InstallDebugLibs
+case "$InstallDebugLibs" in
+    "FALSE")
+	install_dbug=0
+	;;
+esac
+workspace=${CUSTOM}/HDFEOS
+common_he=${workspace}/hdfeos
+common_he5=${workspace}/hdfeos5
+unsupported="dec hp10 hp ibm sgi6n32 sgi sgi6 sun4 sun5 sun5.5 sun5.9 sun5.10 macintosh"
+if [ $install_sun = 0 ] ; then
+    unsupported="$unsupported sun5 sun5_debug"
+elif [ $install_sgi = 0 ] ; then
+    unsupported="$unsupported sgi32 sgi32_debug sgi64 sgi64_debug"
+elif [ $install_opt = 0 ] ; then
+    unsupported="$unsupported sgi32 sgi64"
+fi
+
+if [ $install_dbug = 0 ] ; then
+  unsupported="$unsupported sun5_debug sgi_debug sgi32_debug sgi64_debug"
+fi
+
+# If the "old" installtion method is required create soft links in the
+# HDFEOS directory to itself with the names of the various supported
+# architecture types (e.g. sun5).
+
+if [ $old_install = 1 ] ; then
+    echo Creating Links to mimic '"old style"' Installation...
+      cd $workspace
+    if [ $sun_only = 1 ] ; then
+        supported="sun5"
+    else
+        supported="sgi32 sgi64"
+    fi
+
+    for BRAND in $supported ; do
+      if [ ! -d  $BRAND ] ; then
+          mkdir -p $BRAND
+          cd  $BRAND
+            if [ $install_dbug = 1 ] ; then
+	       ln -s ${ECS_HOME}/${MODE}/CUSTOM/HDFEOS/hdfeos_debug hdfeos_debug
+	       ln -s ${ECS_HOME}/${MODE}/CUSTOM/HDFEOS/hdfeos hdfeos
+	       ln -s ${ECS_HOME}/${MODE}/CUSTOM/HDFEOS/hdfeos5_debug hdfeos5_debug
+	       ln -s ${ECS_HOME}/${MODE}/CUSTOM/HDFEOS/hdfeos5 hdfeos5
+	       cd ${workspace}
+            else
+              ln -s ${ECS_HOME}/${MODE}/CUSTOM/HDFEOS/hdfeos hdfeos
+              ln -s ${ECS_HOME}/${MODE}/CUSTOM/HDFEOS/hdfeos5 hdfeos5
+              cd ${workspace}
+            fi
+      fi
+    done
+
+fi
+
+
+# The HDF-EOS directory structure is copied over verbatim from the
+# clearcase development environment at ECS. Go through and remove any
+# makefiles or "dot" files found in the directory hierarchy under hdfeos
+# (since these files are not needed at the DAAC--which is effectively a
+# "user environment", not a "development" environment).
+
+find ${common_he} -name "*akefile*" -exec rm -f {} \;
+find ${common_he} -name ".???*" -exec rm -f {} \;
+find ${common_he5} -name "*akefile*" -exec rm -f {} \;
+find ${common_he5} -name ".???*" -exec rm -f {} \;
+
+# The HDF-EOS package delivered to the DAACs is pre-build so remove any
+# INSTALL scripts.
+
+find ${common_he}/bin -name "INSTALL*" -exec rm -f {} \;
+find ${common_he}/bin -name "mk*" -exec rm -f {} \;
+find ${common_he5}/bin -name "INSTALL*" -exec rm -f {} \;
+find ${common_he5}/bin -name "mk*" -exec rm -f {} \;
+
+
+# Define those architecture designations which are wholly unsupported for
+# this delivery.
+if [ $install_dbug = 1 ] ; then
+   if [ ! -d ${workspace}/hdfeos_debug ] ; then
+    mkdir ${workspace}/hdfeos_debug
+   fi
+   if [ ! -d ${workspace}/hdfeos5_debug ] ; then
+    mkdir ${workspace}/hdfeos5_debug
+   fi
+
+   for sub_dir in include src doc ; do
+     if [ ! -d $workspace/hdfeos_debug/$subdir ] ; then
+       ln -s $common_he/$sub_dir $workspace/hdfeos_debug/$subdir
+     fi
+     if [ ! -d $workspace/hdfeos5_debug/$subdir ] ; then
+       ln -s $common_he5/$sub_dir $workspace/hdfeos5_debug/$subdir
+     fi
+  done
+
+  cd $workspace/hdfeos_debug
+   
+  if [ ! -d  ${workspace}/hdfeos_debug/bin ] ; then
+    mkdir ${workspace}/hdfeos_debug/bin
+  fi
+
+  if [ ! -d  ${workspace}/hdfeos_debug/lib ] ; then
+    mkdir ${workspace}/hdfeos_debug/lib
+  fi
+
+  cd $workspace/hdfeos5_debug
+   
+  if [ ! -d  ${workspace}/hdfeos5_debug/bin ] ; then
+    mkdir ${workspace}/hdfeos5_debug/bin
+  fi
+
+  if [ ! -d  ${workspace}/hdfeos5_debug/lib ] ; then
+    mkdir ${workspace}/hdfeos5_debug/lib
+  fi
+fi
+
+#echo list of unsupported is $unsupported
+for dir in bin lib ; do
+    for sub_dir in $unsupported ; do
+        if [ -d ${common_he}/${dir}/${sub_dir} ] ; then
+            \rm -rf ${common_he}/${dir}/${sub_dir}
+         fi
+        if [ -d ${common_he5}/${dir}/${sub_dir} ] ; then
+            \rm -rf ${common_he5}/${dir}/${sub_dir}
+         fi
+        if [ -d ${workspace}/${sub_dir} ] ; then
+            \rm -rf ${workspace}/${sub_dir}
+        fi
+    done
+done
+
+cd $common_he/bin
+for sub_dir in * ; do
+    case $sub_dir in
+      *debug)
+	short_dir=`echo $sub_dir | cut -f1 -d_`
+	if [ ! -d  ${workspace}/hdfeos_debug/lib/$short_dir ] ; then
+	  if [ $install_dbug = 1 ] ; then
+	  ln -s ${common_he}/lib/${sub_dir} ${workspace}/hdfeos_debug/lib/$short_dir
+          fi
+        fi
+
+	if [ ! -d  ${workspace}/hdfeos_debug/bin/$short_dir ] ; then
+          if [ $install_dbug = 1 ] ; then
+          ln -s $common_he/bin/${sub_dir} ${workspace}/hdfeos_debug/bin/$short_dir
+	  fi
+	fi
+       ;;
+    esac
+done
+
+cd $common_he5/bin
+for sub_dir in * ; do
+    case $sub_dir in
+      *debug)
+	short_dir=`echo $sub_dir | cut -f1 -d_`
+	if [ ! -d  ${workspace}/hdfeos5_debug/lib/$short_dir ] ; then
+	  if [ $install_dbug = 1 ] ; then
+	  ln -s ${common_he5}/lib/${sub_dir} ${workspace}/hdfeos5_debug/lib/$short_dir
+          fi
+        fi
+
+	if [ ! -d  ${workspace}/hdfeos5_debug/bin/$short_dir ] ; then
+          if [ $install_dbug = 1 ] ; then
+          ln -s $common_he5/bin/${sub_dir} ${workspace}/hdfeos5_debug/bin/$short_dir
+	  fi
+	fi
+       ;;
+    esac
+done
+
+# The directory hierarchy looks as follows:
+#
+# ${CUSTOM}/HDFEOS/hdfeos
+# ${CUSTOM}/HDFEOS/hdfeos5
+#
+# The "old" directory hierarchy looks as follows:
+#
+# ${CUSTOM}/HDFEOS/${BRAND}/hdfeos
+# ${CUSTOM}/HDFEOS/${BRAND}/hdfeos5
+
+#echo $sun_only is sun_only
+if [ $sun_only = 1 ] ; then
+  list="sun5"
+else
+  list="sgi32 sgi64"
+fi
+for LIST in $list ; do
+    if [ $old_install = 0 ] ; then
+        he_home=${CUSTOM}/HDFEOS/hdfeos
+    else
+        he_home=${CUSTOM}/HDFEOS/${LIST}/hdfeos
+    fi
+    if [ $old_install = 0 ] ; then
+        he5_home=${CUSTOM}/HDFEOS/hdfeos5
+    else
+        he5_home=${CUSTOM}/HDFEOS/${LIST}/hdfeos5
+    fi
+    current_hdf="HDF4.2r1"
+    current_hdf5="hdf5-1.6.5"
+    current_szip="szip-2.0"
+    hdf_base=${CUSTOM}/HDF
+    opt_lvl=-O
+
+    hdfeos_home=$he_home
+    hdfeos5_home=$he5_home
+    opt_flag=$opt_lvl
+    opt_flag=-O
+    postfix=""
+    case $LIST in
+	sgi32)
+	    brand=sgi32
+	    num=n32
+	    ;;
+	sgi64)
+	    brand=sgi64
+	    num=64
+	    ;;
+	sun5)
+	    brand=sun5
+	    num=""
+	    ;;
+    esac
+    he_lib=$hdfeos_home/lib/${LIST}$postfix
+    he_bin=$hdfeos_home/bin/${LIST}$postfix
+    tmpdir=$hdfeos_home/bin/tmp
+    hdflib=$hdf_base/${LIST}/$current_hdf/lib
+    hdfinc=$hdf_base/${LIST}/$current_hdf/include
+
+    szipinc=$hdf_base/${LIST}/$current_szip/include
+    sziplib=$hdf_base/${LIST}/$current_szip/lib
+ 
+    he5_lib=$hdfeos5_home/lib/${LIST}$postfix
+    he5_bin=$hdfeos5_home/bin/${LIST}$postfix
+    tmpdir5=$hdfeos5_home/bin/tmp
+    hdf5lib=$hdf_base/${LIST}/$current_hdf5/lib
+    hdf5inc=$hdf_base/${LIST}/$current_hdf5/include
+
+    cd ${CUSTOM}
+    if [ $keep_bckups = 1 ] ; then
+       if [ ! -d backup ] ; then
+	  mkdir -p backup
+       fi
+       cd backup
+       if [ ! -d HDFEOS ] ; then
+	  mkdir -p HDFEOS
+       fi
+       cd HDFEOS
+       he_bck=${CUSTOM}/backup/HDFEOS
+       he5_bck=${CUSTOM}/backup/HDFEOS5
+	 if [ ! -d $he_bck/${brand}_backup ] ; then
+	  mkdir -p $he_bck/${brand}_backup
+	 fi
+	 if [ ! -d $he5_bck/${brand}_backup ] ; then
+	  mkdir -p $he5_bck/${brand}_backup
+	 fi
+	 date '+%m%d%y%H%M%S' | read today
+       if  [ -f $he_bin/hdfeos_env.csh ] ; then
+	    mv $he_bin/hdfeos_env.csh ${he_bck}/${brand}_backup/hdfeos_env.csh.${today}
+       fi
+       if  [ -f $he_bin/hdfeos_env.ksh ] ; then
+	    mv $he_bin/hdfeos_env.ksh ${he_bck}/${brand}_backup/hdfeos_env.ksh.${today}
+       fi
+       if  [ -f $he5_bin/hdfeos_env.csh ] ; then
+	    mv $he5_bin/hdfeos_env.csh ${he5_bck}/${brand}_backup/hdfeos_env.csh.${today}
+       fi
+       if  [ -f $he5_bin/hdfeos_env.ksh ] ; then
+	    mv $he5_bin/hdfeos_env.ksh ${he5_bck}/${brand}_backup/hdfeos_env.ksh.${today}
+       fi
+    elif [ $keep_bckups = 0 ] ; then
+       cd $hdfeos_home/bin
+	  if [ -f $brand/*.csh ] ; then
+	   \rm $brand/*.csh
+	 fi
+	 if [ -f $brand/*.ksh ] ; then
+	   \rm $brand/*.ksh
+	 fi
+       cd $hdfeos5_home/bin
+	  if [ -f $brand/*.csh ] ; then
+	   \rm $brand/*.csh
+	 fi
+	 if [ -f $brand/*.ksh ] ; then
+	   \rm $brand/*.ksh
+	 fi
+    fi
+
+    if [ -d $he_bin ]; then
+     cd $he_bin
+	if [ ! -f $he_bin/hdfeos_env.csh ] ; then
+           echo "setenv HDFEOS_HOME $hdfeos_home" > hdfeos_env.csh
+           echo "setenv HDFLIB $hdflib" >> hdfeos_env.csh
+           echo "setenv HDFINC $hdfinc" >> hdfeos_env.csh
+           echo "set sgi_mode=$num" >> hdfeos_env.csh
+           echo "set opt_flag=$opt_flag" >> hdfeos_env.csh
+           echo "set use_flavor=1" >> hdfeos_env.csh
+	   cat $tmpdir/hdfeos_env.csh.tmp >> hdfeos_env.csh
+	fi
+	if [ ! -f $he_bin/hdfeos_env.ksh ] ; then
+           echo "HDFEOS_HOME=$hdfeos_home" > hdfeos_env.ksh
+           echo "HDFLIB=$hdflib" >> hdfeos_env.ksh
+           echo "HDFINC=$hdfinc" >> hdfeos_env.ksh
+           echo "sgi_mode=$sgi_mode" >> hdfeos_env.ksh
+           echo "opt_flag=$opt_flag" >> hdfeos_env.ksh
+           echo "use_flavor=1" >> hdfeos_env.ksh
+           cat $tmpdir/hdfeos_env.ksh.tmp >> hdfeos_env.ksh
+	fi
+      fi
+    if [ -d $he5_bin ]; then
+     cd $he5_bin
+	if [ ! -f $he5_bin/hdfeos_env.csh ] ; then
+           echo "setenv HDFEOS5_HOME $hdfeos5_home" > hdfeos_env.csh
+           echo "setenv HDF5LIB $hdf5lib" >> hdfeos_env.csh
+           echo "setenv HDF5INC $hdf5inc" >> hdfeos_env.csh
+           echo "setenv SZIPLIB $sziplib" >> hdfeos_env.csh
+           echo "setenv SZIPINC $szipinc" >> hdfeos_env.csh
+           echo "set sgi_mode=$num" >> hdfeos_env.csh
+           echo "set opt_flag=$opt_flag" >> hdfeos_env.csh
+           echo "set use_flavor=1" >> hdfeos_env.csh
+	   cat $tmpdir5/hdfeos_env.csh.tmp >> hdfeos_env.csh
+	fi
+	if [ ! -f $he_bin/hdfeos_env.ksh ] ; then
+           echo "HDFEOS5_HOME=$hdfeos5_home" > hdfeos_env.ksh
+           echo "HDF5LIB=$hdf5lib" >> hdfeos_env.ksh
+           echo "HDF5INC=$hdf5inc" >> hdfeos_env.ksh
+           echo "SZIPLIB=$sziplib" >> hdfeos_env.ksh
+           echo "SZIPINC=$szipinc" >> hdfeos_env.ksh
+           echo "sgi_mode=$sgi_mode" >> hdfeos_env.ksh
+           echo "opt_flag=$opt_flag" >> hdfeos_env.ksh
+           echo "use_flavor=1" >> hdfeos_env.ksh
+           cat $tmpdir5/hdfeos_env.ksh.tmp >> hdfeos_env.ksh
+	fi
+      fi
+        if [ $install_dbug = 1 ] ; then
+	for FLAVOR in *debug ; do
+	    opt_flag=-g
+	done
+	he_obj=$hdfeos_home/obj/${LIST}_debug
+	he_lib=$hdfeos_home/lib/${LIST}_debug
+	he_bin=$hdfeos_home/bin/${LIST}_debug
+	he5_obj=$hdfeos5_home/obj/${LIST}_debug
+	he5_lib=$hdfeos5_home/lib/${LIST}_debug
+	he5_bin=$hdfeos5_home/bin/${LIST}_debug
+
+	case ${LIST}_debug in
+	sgi32_debug)
+	       brand=sgi32
+  	       num=n32
+	;;
+	sgi64_debug)
+	      brand=sgi64
+	      num=64
+	;;
+	sun5_debug)
+	      brand=sun5
+	      num=""
+       ;;
+
+	esac
+
+	tmpdir=$hdfeos_home/bin/tmp
+	hdflib=$hdf_base/${LIST}_debug/$current_hdf/lib
+	hdfinc=$hdf_base/${LIST}_debug/$current_hdf/include
+        sziplib=$hdf_base/${LIST}_debug/$current_szip/lib
+        szipinc=$$hdf_base/${LIST}_debug/$current_hdf/include
+	tmpdir5=$hdfeos5_home/bin/tmp
+	hdf5lib=$hdf_base/${LIST}_debug/$current_hdf5/lib
+	hdf5inc=$hdf_base/${LIST}_debug/$current_hdf5/include
+	cd ${CUSTOM}
+        if  [ $keep_bckups = 1 ] ; then
+	  if [ ! -d backup ] ; then
+	    mkdir -p backup
+	  fi
+	  cd backup
+	  if [ ! -d HDFEOS ] ; then
+	      mkdir -p HDFEOS
+	  fi
+	  cd HDFEOS
+          he_bck=${CUSTOM}/backup/HDFEOS
+          he5_bck=${CUSTOM}/backup/HDFEOS5
+	  if [ ! -d $he_bck/${brand}_debug_backup ] ; then
+	    mkdir -p $he_bck/${brand}_debug_backup
+	  fi
+	  if [ ! -d $he5_bck/${brand}_debug_backup ] ; then
+	    mkdir -p $he5_bck/${brand}_debug_backup
+	  fi
+	  date '+%m%d%y%H%M%S' | read today
+	  if  [ -f $he_bin/hdfeos_env.csh ] ; then
+	     mv $he_bin/hdfeos_env.csh $he_bck/${brand}_debug_backup/hdfeos_env.csh.${today}
+	  fi
+	  if  [ -f $he_bin/hdfeos_env.ksh ] ; then
+	     mv $he_bin/hdfeos_env.ksh  $he_bck/${brand}_debug_backup/hdfeos_env.ksh.${today}
+	  fi
+	  if  [ -f $he5_bin/hdfeos_env.csh ] ; then
+	     mv $he5_bin/hdfeos_env.csh $he5_bck/${brand}_debug_backup/hdfeos_env.csh.${today}
+	  fi
+	  if  [ -f $he5_bin/hdfeos_env.ksh ] ; then
+	     mv $he5_bin/hdfeos_env.ksh  $he5_bck/${brand}_debug_backup/hdfeos_env.ksh.${today}
+	  fi
+	else
+	      \rm ${he_bin}/*.csh
+	      \rm ${he_bin}/*.ksh
+	      \rm ${he5_bin}/*.csh
+	      \rm ${he5_bin}/*.ksh
+	fi
+
+	if [ -d $he_bin ]; then
+	  cd $he_bin
+          if [ ! -f $he_bin/hdfeos_env.csh ] ; then
+		echo "setenv HDFEOS_HOME $hdfeos_home" > hdfeos_env.csh
+		echo "setenv HDFLIB $hdflib" >> hdfeos_env.csh
+		echo "setenv HDFINC $hdfinc" >> hdfeos_env.csh
+		echo "set sgi_mode=$num" >> hdfeos_env.csh
+		echo "set opt_flag=$opt_flag" >> hdfeos_env.csh
+		echo "set use_flavor=1" >> hdfeos_env.csh
+		cat $tmpdir/hdfeos_env.csh.tmp >> hdfeos_env.csh
+	  fi
+	if [ ! -f $he_bin/hdfeos_env.ksh ] ; then	
+		echo "HDFEOS_HOME=$hdfeos_home" > hdfeos_env.ksh
+		echo "HDFLIB=$hdflib" >> hdfeos_env.ksh
+		echo "HDFINC=$hdfinc" >> hdfeos_env.ksh
+		echo "sgi_mode=$num" >> hdfeos_env.ksh
+		echo "opt_flag=$opt_flag" >> hdfeos_env.ksh
+		echo "use_flavor=1" >> hdfeos_env.ksh
+		cat $tmpdir/hdfeos_env.ksh.tmp >> hdfeos_env.ksh
+        fi
+     fi
+	if [ -d $he5_bin ]; then
+	  cd $he5_bin
+          if [ ! -f $he5_bin/hdfeos_env.csh ] ; then
+		echo "setenv HDFEOS5_HOME $hdfeos5_home" > hdfeos_env.csh
+		echo "setenv HDF5LIB $hdf5lib" >> hdfeos_env.csh
+		echo "setenv HDF5INC $hdf5inc" >> hdfeos_env.csh
+                echo "setenv SZIPLIB $sziplib" >> hdfeos_env.csh
+                echo "setenv SZIPINC $szipinc" >> hdfeos_env.csh
+		echo "set sgi_mode=$num" >> hdfeos_env.csh
+		echo "set opt_flag=$opt_flag" >> hdfeos_env.csh
+		echo "set use_flavor=1" >> hdfeos_env.csh
+		cat $tmpdir5/hdfeos_env.csh.tmp >> hdfeos_env.csh
+	  fi
+	if [ ! -f $he5_bin/hdfeos_env.ksh ] ; then	
+		echo "HDFEOS5_HOME=$hdfeos5_home" > hdfeos_env.ksh
+		echo "HDF5LIB=$hdf5lib" >> hdfeos_env.ksh
+		echo "HDF5INC=$hdf5inc" >> hdfeos_env.ksh
+                echo "SZIPLIB=$sziplib" >> hdfeos_env.ksh
+                echo "SZIPINC=$szipinc" >> hdfeos_env.ksh
+		echo "sgi_mode=$num" >> hdfeos_env.ksh
+		echo "opt_flag=$opt_flag" >> hdfeos_env.ksh
+		echo "use_flavor=1" >> hdfeos_env.ksh
+		cat $tmpdir5/hdfeos_env.ksh.tmp >> hdfeos_env.ksh
+        fi
+     fi
+  fi
+
+done
+
+#Remove the unsupported DAAC architectures (determined above).
+
+for dir in bin lib ; do
+    for sub_dir in $unsupported ; do
+        if [ -d ${common_he}/${dir}/${sub_dir} ] ; then
+            \rm -rf ${common_he}/${dir}/${sub_dir}
+        fi
+        if [ -d ${common_he5}/${dir}/${sub_dir} ] ; then
+            \rm -rf ${common_he5}/${dir}/${sub_dir}
+        fi
+        if [ -d ${workspace}/${sub_dir} ] ; then
+            \rm -rf ${workspace}/${sub_dir}
+        fi
+    done
+    if [ -d ${CUSTOM}/backup/HDFEOS ] ; then
+    cd ${CUSTOM}/backup/HDFEOS
+    for dir in $unsupported ; do
+        if [ -d ${dir}_backup ] ; then
+            \rm -rf ${dir}_backup
+        fi
+    done
+    fi
+    if [ -d ${CUSTOM}/backup/HDFEOS5 ] ; then
+    cd ${CUSTOM}/backup/HDFEOS5
+    for dir in $unsupported ; do
+        if [ -d ${dir}_backup ] ; then
+            \rm -rf ${dir}_backup
+        fi
+    done
+    fi
+done
+
+return 0
+
+

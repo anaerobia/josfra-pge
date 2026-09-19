@@ -1,0 +1,117 @@
+#-----------------------------------------------------------------------------
+# file:	README-AAdata
+# 	
+# description:
+#       Installation instructions for the SDP Toolkit AA tools data files.
+# author:
+#	Mike Sucher / Applied Research Corp.
+# history:
+#       21-Oct-1994 MES Initial version
+#       22-Feb-1995 MES Revised for Release 4
+#       24-Jul-1995 EML Revised for Release 5
+#       30-Nov-1995 MES Revised for Release IR-1
+#       25-Apr-1996 MES Revised for Release A
+#-----------------------------------------------------------------------------
+
+This section covers installation of the data files needed to use the 
+Ancillary/Auxiliary (AA) data access tools.  These files include the
+Digital Chart of the World and other earth sciences data sets.  See 
+the User's Guide for a listing of these data sets.  If you do not plan 
+to use these tools or data sets, it is not necessary to install the
+files.
+
+These files will require approximately 260 Mb of disk space.  They may
+be installed in any location, i.e. they do not have to be stored under
+the SDP Toolkit home directory.
+
+The tool PGS_AA_DCW MUST have access to the files contained in the four
+directories named /soamafr, /sasaus, /noamer, /eurnasia in order to work.
+These files comprise about 80 Mbytes.  The other tools (PGS_AA_2/3DRead
+PGS_AA_2/3DGeo, PGS_AA_DEM) are designed to work with a large range of 
+gridded data sets.  Those in the distribution file are samples of data 
+from NGDC which need not be maintained by the user; i.e. the user should 
+delete which ever are not pertinent.  These files comprise about 180 Mbytes.
+
+The files may be installed in any location, i.e. they do not have to be 
+stored under the SDP Toolkit home directory.
+
+The installation script for the AA tools data files is included as part 
+of the main SDP Toolkit distribution.   Due to space constraints,  the
+data files themselves are located in a separate compressed tar file, called 
+SDPTK5.1v1.00-AAdata.tar.Z, which must be downloaded separately.
+
+You must first install the SDP Toolkit BEFORE installing the AA tools data
+files.  
+
+The AA tools data files installation requires a disk partition with about 
+400 Mb of free space.
+
+
+To install the AA tools data files from the distribution file:
+
+1)  Run the INSTALL-AAdata script
+
+    a) If you have you already modified your login files, as per section
+    8 of the toolkit installation instructions, simply type:
+
+        INSTALL-AAdata
+
+    from any directory.  
+
+    b) If you haven't yet done this, then proceed by typing the following:
+
+        cd <SDP-home-dir>
+        bin/INSTALL-AAdata
+
+    where <SDP-home-dir> is the full path of the SDP home directory.
+
+2)  The script contians a default name for the distribution file containing
+    the AA tools data files.  That name should be correct for the current
+    release of the toolkit.  The script will display the default distribution
+    file name and prompt the user for an override.   If the name is correct,
+    press return to continue.   If installing from a different distribution
+    file for any reason, please enter the name and press return.
+
+3)  By default, the script looks for the distribution file in your current 
+    directory and also in <SDP-home-dir>.  If the file is found in one of 
+    the default locations, the script will continue to the next step. 
+    Otherwise, please enter the correct location when the script prompts 
+    for it.  
+
+4)  The script then asks where the AAdata directory will be created.  The
+    default is <SDP-home-dir>.  If you want it installed elsewhere, please
+    enter the pathname when the script prompts for the location.  Otherwise,
+    simply hit return to continue.
+
+5)  The script asks you to verify the information entered. Type 'y' and hit 
+    return to continue.   The contents of the distribution file are then 
+    extracted into the specified location.  Please note that this is a
+    lengthy process that will probably take somewhere between 0.5 and 1.5
+    hours, depending on your host.
+
+6)  The script then asks if the Process Control File should be patched so 
+    that the PRODUCT INPUT FILES directory is set to point to the AA data
+    directory.  The default is yes.   If you answer no, you must edit the
+    Process Control File yourself, in order for the AA tools to work.
+
+7)  The script then asks if the distribution file should be removed.  The 
+    default is no.  Once you are satisfied that the files have successfully 
+    been installed, you will probably want to get rid of this file, as it 
+    takes up lots of disk space.
+
+    If you wish to get a listing of the files contained in the distribution 
+    file, for verification purposes, follow the steps below.  Please be aware 
+    that this is no small task, as there are literally thousands of data files 
+    contained in the distribution file.   To see the listing, go to the 
+    directory where the distribution file is located and type: 
+
+        zcat SDPTK5.1v1.00-AAdata.tar.Z | tar tvf -
+
+    You may wish to pipe the output to the Unix 'more' command, to allow you
+    to see a screen at a time:
+
+        zcat SDPTK5.1v1.00-AAdata.tar.Z | tar tvf - | more
+
+
+This completes the installation of the AA tools data files.
+

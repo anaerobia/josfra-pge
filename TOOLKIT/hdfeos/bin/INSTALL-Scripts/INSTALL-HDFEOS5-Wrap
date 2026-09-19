@@ -1,0 +1,688 @@
+#!/bin/sh
+#-----------------------------------------------------------------------------
+# filename:
+# 	INSTALL-HDFEOS5-Wrap
+#
+# description:
+# 	HDFEOS5 installation script wrapper for the SDP(PGS) Toolkit and hdfeos
+# 	The purpose of this script is to integrate the installation
+# 	of HDFEOS5 when it is being performed concurrently with the
+# 	SDP Toolkit or hdfeos installation. In normal use this script is called
+# 	by INSTALL, the master Toolkit installation script, though it
+# 	may also be run standalone.
+#
+# usage:
+# 	INSTALL-HDFEOS5-Wrap [-sgi32 | -sgi64] [-log <log-file> 
+#                            [-cc_path <path/compiler_name>]
+#                            [-append]] [-df <distribution-file>] 
+#                            [-w_home <file>] [-batch]
+# 	                     [-install_dir <base installation directory>]
+# 	INSTALL-HDFEOS5-Wrap [-h] 
+#
+# 	  -sgi32  : build in -n32   mode (SGI Power Challenge only)
+# 	  -sgi64  : build in 64-bit mode (SGI Power Challenge only)
+# 	  -log    : send session output to <log-file>
+# 	  -dbug   : build debug version of hdfeos library
+#         -cc_path: set the path of the C compiler to <path/compiler_name>
+# 	  -append : append to existing <log-file>
+# 	  -w_home : write HDFEOS5 home directory to <file>
+# 	  -df     : install HDFEOS5 from distribution file <distribution-file>
+# 	  -batch  : run script in batch (i.e. non-interactive) mode
+# 	  -h      : display this help message and exit
+#
+# notes:
+# 	1) An initial installation requires the HDFEOS5 distribution file to 
+# 	   have been previously downloaded.  Also, HDF5 must already be 
+# 	   installed, preferably as part of the Toolkit installation.
+# 	    
+# 	2) This script requires the environment variables HDF5INC, HDFLIB,
+#          SZIPINC and SZIPLIB to be properly set.  In normal use these
+# 	   will be set by the INSTALL script.
+#
+# author:
+#        Mike Sucher / Applied Research Corp.
+#        Abe Taaheri/ Emergent Information Technologies, Inc.
+#        Phuong T. Nguyen/ L3 Communication.
+# history:
+#       12-Jan-2001 AT  Initial Version. Used INSTALL-HDFEOS-Wrap for this 
+#                       script as template and modified to work for HDFEOS5
+#       16-Jan-2002 PTN Changed HDF-EOS5.0.tar.Z to HDF-EOS5.1.2.tar.Z 
+#       17-Jul-2002 PTN Changed HDF-EOS5.1.2.tar.Z to HDF-EOS5.1.3.tar.Z
+#       24-Mar-2003 PTN Changed HDF-EOS5.1.4.tar.Z to HDF-EOS5.1.5.tar.Z
+#       15-Sep-2003 PTN Add -cc_path option.
+#       20-Oct-2003 AT  Changed HDF-EOS5.1.5.tar.Z to HDF-EOS5.1.6.tar.Z
+#       18-Jan-2005 MP  Changed HDF-EOS5.1.8.tar.Z to HDF-EOS5.1.9.tar.Z
+#       08-Sep-2005 AT  Changed HDF-EOS5.1.9.tar.Z to HDF-EOS5.1.10.tar.Z
+#       05-Jul-2007 AT  Changed HDF-EOS5.1.10.tar.Z to HDF-EOS5.1.11.tar.Z
+#       20-May-2009 AT  Changed HDF-EOS5.1.11.tar.Z to HDF-EOS5.1.12.tar.Z
+#       20-Jul-2010 AT  Changed HDF-EOS5.1.12.tar.Z to HDF-EOS5.1.13.tar.Z
+#       16-Nov-2011 AT  Changed HDF-EOS5.1.13.tar.Z to HDF-EOS5.1.14.tar.Z
+#       27-Jan-2014 AT  Changed HDF-EOS5.1.14.tar.Z to HDF-EOS5.1.15.tar.Z
+#       17-Sep-2017 AT  Changed HDF-EOS5.1.15.tar.Z to HDF-EOS5.1.16.tar.Z
+#
+#-----------------------------------------------------------------------------
+
+this_script="`basename $0`"
+
+
+#****************************************************************
+#                                                               *
+#                   * * * Functions  * * *                      *
+#                                                               *
+#****************************************************************
+
+#
+# Function to output error message
+#
+
+WriteError()
+{
+    echo ""
+    echo "${this_script}: Error: $*"  >&2
+}
+
+
+#
+# Function to output message to logfile and console
+#
+
+EchoAndLog()
+{
+    if [ "$1" = "-n" ] ; then		# -n: suppress leading blank line
+        shift
+    else
+        echo ""
+        if [ "$log_file" != "" ] ; then
+            echo "" >> $log_file
+        fi
+    fi
+    
+    echo "$*"
+    if [ "$log_file" != "" ] ; then
+         echo "$*" >> $log_file
+    fi
+}
+
+
+#
+# Function to prompt for user response
+#
+
+UserPrompt()
+{
+    if [ "$1" = -x ] ; then		# -x: eXpand shell variables
+        shift
+        expand_flag=1
+    else
+        expand_flag=0
+    fi
+
+    if [ "$BRAND" = "linux" ] || [ "$BRAND" = "linux32" ] || [ "$BRAND" = "linux64" ] ; then
+	/bin/echo "$* \c" > /dev/tty
+    else
+	echo "$* \\c" > /dev/tty
+    fi
+
+    read user_response
+
+    if [ $expand_flag = 1 ] ; then	# perform shell variable expansion
+        user_response=`echo $user_response | sed 's%~%$HOME%'`  # map ~ to $HOME
+        user_response=`eval echo $user_response`		# expand all
+    fi
+}
+
+
+#
+# Function to output help message and exit
+#
+
+Help()
+{
+    sed -n '/filename:/,/author:/p' $0 | grep -v "author:" | cut -c3-300 | more
+    #this line must be here because it contains the string: "author:"
+    exit
+}
+
+#
+# Function to get the location of the distribution file
+#
+    
+GetDistribution()
+{    
+    : ${distrib_file:=HDF-EOS5.1.16.tar.Z}
+
+    ds1=$distrib_file			# backup copy
+    
+    # derive tar file name
+
+    case "$distrib_file" in
+
+      HDF-EOS5.1.14.tar.Z )
+        tar_file=HDF-EOS5.1.14.tar
+        HDFEOS5_home=hdfeos5
+        ;;
+
+      HDF-EOS5.1.15.tar.Z )
+        tar_file=HDF-EOS5.1.15.tar
+        HDFEOS5_home=hdfeos5
+        ;;
+
+      HDF-EOS5.1.16.tar.Z )
+        tar_file=HDF-EOS5.1.16.tar
+        HDFEOS5_home=hdfeos5
+        ;;
+
+      * )
+        EchoAndLog "HDFEOS5 version in $distrib_file not supported by this script."
+        exit 1
+        ;;
+
+    esac
+
+    
+    # set search path to include current dir, parent of current and $HOME    
+    search_path=`pwd`
+    search_path="$search_path `cd ..; pwd` $HOME"
+
+    # set search file to include compressed tar file and uncompressed tar file
+    search_file="$distrib_file $tar_file"
+
+    # search for the distribution file
+
+    found_file=0
+    for distrib_path in $search_path ; do
+
+        for distrib_file in $search_file ; do
+
+            if [ -f ${distrib_path}/${distrib_file} ] ; then
+                found_file=1
+                break
+            fi
+
+        done
+
+        if [ $found_file = 1 ] ; then
+            break
+        fi
+
+    done
+
+    # if file was not found, ask the user
+
+    if [ $found_file = 0 ] ; then
+
+	if [ $batch_mode = 0 ] ; then
+	    echo ""	
+	    UserPrompt -x "Pathname where $ds1 is located: "
+	    echo ""
+  	else
+	    user_response=""
+	fi
+    
+        if [ "$user_response" != "" ] ; then
+
+            # make sure directory exists
+
+            if [ -d $user_response ] ; then
+                distrib_path=$user_response
+            else 
+                WriteError "Invalid directory: $user_response"
+                exit 1
+            fi
+    
+            # search for the distribution file in user directory
+
+            for distrib_file in $search_file ; do
+
+                if [ -f ${distrib_path}/${distrib_file} ] ; then
+                    found_file=1
+                    break
+                fi
+
+            done
+
+        fi
+
+
+    fi
+
+
+    if [ $found_file = 0 ] ; then
+        WriteError "Can't find ${ds1} in (${search_path})"
+        echo "HDFEOS5 installation cancelled."
+        exit 1
+    fi
+
+}
+
+# 
+# Function to get the location of the HDFEOS home directory for installation
+# Also, prompt user that all information is valid before proceeding
+#
+
+GetInstallDir()
+{    
+    if [ "$HDFEOS5_path" = "" ] ; then
+	HDFEOS5_path="`pwd`"
+    fi
+    
+
+    if [ "$HDFEOS5_path" = "`pwd`" ] ; then
+	HDFEOS5_path="$HDFEOS5_path/.."
+    fi
+echo "$HDFEOS5_path"
+
+    # ask the user
+    
+    if [ $batch_mode = 0 ] ; then
+	UserPrompt -x "Pathname where directory '$HDFEOS5_home' will be created [$HDFEOS5_path]: " 
+	echo ""
+    else
+	user_response=""
+    fi
+    
+    if [ "$user_response" = "" ] ; then
+        if [  ! -d `dirname $HDFEOS5_path`  ] ; then mkdir `dirname $HDFEOS5_path` ; fi
+        if [  ! -d $HDFEOS5_path  ] ; then  mkdir $HDFEOS5_path ; fi
+    else
+        if [ -d "$user_response" ] ; then HDFEOS5_path=$user_response ; fi
+    fi
+    
+    if [ ! -d $HDFEOS5_path ] ; then
+	if [ $batch_mode = 0 ] ; then
+	    UserPrompt "$HDFEOS5_path does not exist.  Create [y]? "
+	else
+	    user_response=y
+	fi
+	if [ "$user_response" = "" ] ; then user_response="y" ; fi
+	case "$user_response" in
+	    y* | Y* )
+		mkdir -p $HDFEOS5_path
+		if [ ! -d $HDFEOS5_path ] ; then
+		    WriteError "Unable to create directory $HDFEOS5_path." 
+		    echo "HDFEOS5 installation cancelled." 2>&1
+		    exit 1
+		
+		fi
+		;;
+	    *)
+		WriteError "Directory $HDFEOS5_path does not exist." 
+		echo "HDFEOS5 installation cancelled." 2>&1
+		exit 1
+		;;
+        esac
+    fi
+    
+    
+    #
+    # confirm before proceeding
+    #
+    
+    echo "The HDFEOS5 directory will be restored from: " 
+    echo "    ${distrib_path}/${distrib_file}" 
+    echo "" 
+    echo "The HDFEOS5 directory will be created in: " 
+    echo "     ${HDFEOS5_path}" 
+    echo "" 
+
+    if [ $batch_mode = 0 ] ; then
+	UserPrompt "Continue [yes] ? " 
+	case "$user_response" in
+	    n* | N* ) echo "Cancelled." ; exit 1 ;;
+	    * ) echo "Confirmed." ; echo "" ;;
+	esac
+    fi
+}
+
+#
+# Function to unpack the distribution file into the installation directory
+#
+
+UnpackDistribution()
+{
+    #
+    # Go to the HDFEOS parent directory
+    #
+    
+    cd $HDFEOS5_path
+
+    #
+    # If the new HDFEOS home directory already exits, it must
+    # be removed first.  Check with the user before proceeding.
+    #
+    
+    if [ -d "$HDFEOS5_home" ] ; then
+    
+        EchoAndLog "The directory $HDFEOS5_home already exists."
+	if [ $batch_mode = 0 ] ; then
+	    UserPrompt "[O]verwrite, [R]e-use or [Q]uit (default) ? "
+	else
+	    user_response=r
+	fi
+
+        case "$user_response" in
+          o* | O* )
+            EchoAndLog "Removing old $HDFEOS5_home directory ..."
+            /bin/rm -rf $HDFEOS5_home
+            ;;
+    
+          r* | R* )
+            EchoAndLog "Installation will use existing $HDFEOS5_home directory."
+            return 0
+            ;;
+    
+          * )
+            EchoAndLog "Cancelled."
+            exit 1
+            ;;
+        esac
+    
+    fi
+    
+    
+    #
+    # Create a link to the distribution file, if necessary.
+    #
+
+    link_flag=0
+    if [ ! -f $distrib_file ] ; then
+        if [ -f ${distrib_path}/${distrib_file} ] ; then
+            ln -s ${distrib_path}/${distrib_file} ${distrib_file}
+            link_flag=1
+        fi
+    fi
+    
+    # 
+    # Uncompress the distribution file, (if needed), and extract the files
+    # 
+    
+    EchoAndLog "Extracting files from $distrib_file ..."
+
+    suffix="`echo $distrib_file |  sed 's/^.*\.//'`"
+    case $suffix in
+    
+      Z  )
+        zcat $distrib_file | tar xvf - | awk '{printf "."}' 2>&1
+        echo ""
+        ;;
+
+      tar)
+        tar xvf $distrib_file | awk '{printf "."}' 2>&1
+        echo ""
+        ;;
+    
+    esac
+
+    #
+    # Clean up symbolic link, if present
+    #
+
+    if [ $link_flag = 1 ] ; then
+        /bin/rm -f $distrib_file
+    fi
+
+
+}
+
+
+#****************************************************************
+#                                                               *
+#                  * * * Main Program  * * *                    *
+#                                                               *
+#****************************************************************
+
+
+
+#
+# Get arguments from command line
+#
+
+home_file=""
+no_untar=0
+sgi_mode=32		# by default, SGI mode is standard 32-bit
+log_file=""
+distrib_file=""
+fc_path=""
+cc_path=""
+append=0
+dbug=0
+batch_mode=0
+ts_mode=0
+
+while [ "$1" != "" ]
+do
+    case $1 in
+
+      -h | -he  | -hel  | -help  ) Help ;;	# help
+
+      -sgi32) sgi_mode=n32 ;;
+      -sgi64) sgi_mode=64 ;;
+
+      -fc_path ) fc_path="$2" ; shift ;;
+
+      -cc_path ) cc_path="$2" ; shift ;;
+
+      -df) distrib_file="$2" ; shift ;;
+
+      -log )
+        if [ "$2" != "" ] ; then
+            if [ "` echo $2 | cut -c1`" = "/" ] ; then
+                log_file="$2"
+            else
+                log_file="$start_dir/$2"
+            fi
+            shift
+        else
+            WriteError "A log file must be specified with the -log option"
+            Help
+        fi
+        ;;
+
+      -append )
+        append=1
+        ;;
+
+      -dbug )
+        dbug=1
+        ;;
+
+       -ts) 
+	ts_mode=1
+	;;
+
+     -ts_dbug)
+	ts_mode=1
+	dbug=1
+	;;
+
+      -w_home )
+        if [ "$2" != "" ] ; then
+            if [ "` echo $2 | cut -c1`" = "/" ] ; then
+                home_file="$2"
+            else
+                home_file="$start_dir/$2"
+            fi
+            shift
+        else
+            WriteError "A file name must be specified with the -w_home option."
+            Help
+        fi
+        ;;
+
+      -install_dir )
+        if [ "$2" != "" ] ; then
+	    HDFEOS5_path=$2
+            shift
+        else
+            WriteError "No installation directory specified with -install_dir switch."
+            Help
+        fi
+        ;;
+
+	-batch )
+	    batch_mode=1
+	;;
+
+      -*)
+        echo "Invalid option: $1"
+        Help
+        ;;
+
+      *) 				# default
+        value1="$1"
+        ;;
+
+    esac
+
+    shift
+
+done
+
+
+#
+# Initialize the home file
+#
+
+if [ "$home_file" != "" ] ; then
+
+    if [ -f "$home_file" ] ; then 
+        /bin/rm -f $home_file > /dev/null 2>&1
+    fi
+
+    touch $home_file > /dev/null 2>&1
+    if [ $? != 0 ] ; then
+        WriteError "Cannot write to file $home_file"
+        exit 1
+    fi
+
+fi
+
+
+#
+# Get the location of the distribution file
+#
+
+GetDistribution
+
+
+#
+# Got valid distribution file
+# Get the location of the HDFEOS home directory for installation
+#
+
+GetInstallDir
+
+
+
+
+#
+# Unpack the distribution file into the installation directory
+#
+
+cd $HDFEOS5_path
+
+if [ "$no_untar" = 0 ] ; then
+    UnpackDistribution
+fi
+
+
+#
+# Prepare to install the requested version of HDFEOS
+#
+
+if [ ! -d "$HDFEOS5_path" ] ; then
+    EchoAndLog "Error creating directory: $HDFEOS5_path"
+    exit 1
+fi
+
+cd $HDFEOS5_path/$HDFEOS5_home		# go to the starting directory
+
+EchoAndLog "Setting directory to: $HDFEOS5_path/$HDFEOS5_home"
+
+# HDF-EOS expects these directories to be in place, if they are not
+# then create them here.  If we have to do this then the INSTALL may
+# fail, but at least we're still one step ahead of the game
+
+if [ ! -d bin/$BRAND ] ; then
+        mkdir bin/$BRAND
+fi
+ 
+if [ ! -d obj/$BRAND ] ; then
+        mkdir obj/$BRAND
+fi
+ 
+if [ ! -d lib/$BRAND ] ; then
+        mkdir lib/$BRAND
+fi
+
+install_flags="-i$HDF5INC -l$HDF5LIB -szi$SZIPINC -szl$SZIPLIB"
+
+if [ $dbug = 1 ] ; then
+    if [ $ts_mode = 1 ] ; then
+	install_flags="$install_flags -ts_dbug"
+    else
+	install_flags="$install_flags -dbug"
+    fi
+else
+    if [ $ts_mode = 1 ] ; then
+	install_flags="$install_flags -ts"
+    else
+	install_flags="$install_flags"
+    fi
+fi
+
+case "$sgi_mode" in
+  n32)
+    install_flags="$install_flags -sgi32" ;;
+  64)
+    install_flags="$install_flags -sgi64" ;;
+esac
+
+if [ "$cc_path" != "" ] ; then 		# path for C compiler
+    install_flags="$install_flags -cc_path $cc_path"
+fi
+
+if [ "$fc_path" != "" ] ; then 		# path for FORTRAN compiler
+    install_flags="$install_flags -fc_path $fc_path"
+fi
+
+EchoAndLog "Running the HDFEOS5 installation script ..."
+
+return_status=0
+if [ "$log_file" != "" ] ; then
+
+    if [ $append = 1 ] ; then
+        bin/INSTALL-HDFEOS $install_flags >> $log_file 2>&1 # append
+        return_status=$?
+    else
+        bin/INSTALL-HDFEOS $install_flags > $log_file  2>&1 # clobber
+        return_status=$?
+    fi
+
+else
+
+    bin/INSTALL-HDFEOS $install_flags
+    return_status=$?
+
+fi
+
+
+# 
+# Pass back the HDF5 install directory for the toolkit installation
+# 
+
+if [ $return_status = 0 ] ; then
+
+    if [ "$home_file" != "" ] ; then
+      echo $HDFEOS5_path/$HDFEOS5_home >> $home_file
+    fi
+
+fi
+
+
+if [ $return_status != 0 ] ; then
+    echo "The HDFEOS5 Installation Script failed or had errors."
+    exit 1
+fi
+
+

@@ -1,0 +1,65 @@
+
+   TIME OFFSETS:
+
+      This function accepts an ASCII UTC time, an array of time offsets and the
+      number of offsets as input.  Each element in the offset array is an offset
+      in seconds relative to the initial input ASCII UTC time.
+
+      An error will be returned if the number of offsets specified is less than
+      zero.  If the number of offsets specified is actually zero, the offsets
+      array will be ignored.  In this case the input ASCII UTC time will be
+      converted to Toolkit internal time (TAI) and this time will be used to
+      process the data.  If the number of offsets specified is one (1) or
+      greater, the input ASCII UTC time will converted to TAI and each element
+      'i' of the input data will be processed at the time: (initial time) +
+      (offset[i]).
+
+      Examples:
+         
+         if numValues is 0 and asciiUTC is "1993-001T12:00:00" (TAI: 432000.0),
+         then input[0] will be processed at time 432000.0 and return output[0]
+
+	 if numValues is 1 and asciiUTC is "1993-001T12:00:00" (TAI: 432000.0),
+         then input[0] will be processed at time 432000.0 + offsets[0] and
+         return output[0]
+
+         if numValues is N and asciiUTC is "1993-001T12:00:00" (TAI: 432000.0),
+         then each input[i] will be processed at time 43000.0 + offsets[i] and
+         the result will be output[i], where i is on the interval [0,N)
+
+   ERROR HANDLING:
+
+      This function processes data over an array of times (specified by an input
+      ASCII UTC time and an array of time offsets relative to that time). 
+
+      If processing at each input time is successful the return status of this
+      function will be PGS_S_SUCCESS (status level of 'S').
+
+      If processing at ALL input times was unsuccessful the status level of the
+      return status of this function will be 'E'.
+
+      If processing at some (but not all) input times was unsuccessful the
+      status level (see SMF) of the return status of this function will be 'W'
+      AND all high precision real number (C: PGSt_double, FORTRAN: DOUBLE
+      PRECISION) output variables that correspond to the times for which
+      processing was NOT successful will be set to the value:
+      PGSd_GEO_ERROR_VALUE.  In this case users may (should) loop through the
+      output testing any one of the aforementioned output variables against
+      the value PGSd_GEO_ERROR_VALUE.  This indicates that there was an error in
+      processing at the corresponding input time and no useful output data was
+      produced for that time.  
+
+      Note: a return status with a status of level of 'W' does not necessarily
+      mean that some of the data could not be processed.  The 'W' level may
+      indicate a general condition that the user may need to be aware of but
+      that did not prohibit processing.  For example, if an Earth ellipsoid
+      model is required, but the user supplied value is undefined, the WGS84
+      model will be used, and processing will continue normally, except that the
+      return status will be have a status level of 'W' to alert the user that
+      the default earth model was used and not the one specified by the user.
+      The reporting of such general warnings takes precedence over the generic
+      warning (see RETURNS above) that processing was not successful at some of
+      the requested times.  Therefore in the case of any return status of level
+      'W', the returned value of a high precision real variable generally should
+      be examined for errors at each time offset, as specified above.
+

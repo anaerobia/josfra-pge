@@ -1,0 +1,16 @@
+cacheFormat1  = short
+cacheFormat2	= 0 
+cacheFormatBytes = 2
+parmMemoryCache	= 4406400
+dataType	= short	
+autoOperation	= 9
+fileMemoryCache	= 4406400 
+maxLat	= 42.000
+minLat	= 33.000
+maxLong	= -111.000
+minLong	= -128.000	 
+xCells	= 2040
+yCells	= 1080
+zCells	= 0	
+funcIndex = 0
+swapBytes = yes

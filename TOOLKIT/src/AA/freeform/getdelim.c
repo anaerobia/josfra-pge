@@ -1,0 +1,1 @@
+#error ff_get_delimiters() has moved into dbevents.c

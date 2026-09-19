@@ -1,0 +1,52 @@
+#! /bin/ksh
+##############################################################################
+#                                                                            #
+# Name        : EcTkMkcfg                                                    #
+# Author      : Derrick Clark                                                #
+# Description : Top level Mkcfg file                                         #
+# Date        : Dec 20, 1999                                                 #
+#                                                                            #
+# Date       Who              What                                           #
+# ----       ---------        --------------------                           #
+# 12/20/1999 Derrick Clark    Initial "new" Top-level "Mkcfg".               #
+# 07/14/2003 Derrick Clark    Removed Call to AAdata.                        #
+#                                                                            #
+##############################################################################
+
+# Export all variables
+set -o allexport
+
+[ $# -ne 1 ] && print "Usage: $0 MODE" && exit 1
+
+MODE=$1
+eval $(EcCoScriptlib set_environment $MODE)
+
+# Make sure needed variables are set
+[ -z "$ECS_HOME" ] && NOTSET="$NOTSET ECS_HOME"
+
+[ ! -z "$NOTSET" ] && {
+	print "Re-run after setting the following environment variables:\n\t${NOTSET}"
+	exit 1
+}
+
+SCRDIR=${ECS_HOME}/${MODE}/CUSTOM/utilities
+
+# Exit if SCRDIR does not exist.
+EcCoScriptlib check_dirs $SCRDIR || exit 1
+
+MKCFG_SCRIPTS="
+	EcTkToolkitCoreMkcfg
+	EcTkHDFMkcfg
+	EcTkHdfEosMkcfg
+	"
+
+RETCODE=0
+
+# Run the Mkcfg scripts that are installed, skipping the others.
+for mkcfg_script in $MKCFG_SCRIPTS
+do
+	[ -f ${SCRDIR}/$mkcfg_script ] || continue
+	${SCRDIR}/$mkcfg_script ${MODE} || RETCODE=1
+done
+
+return $RETCODE

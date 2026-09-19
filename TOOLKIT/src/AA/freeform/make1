@@ -1,0 +1,156 @@
+SHELL=/bin/sh
+
+# define C preprocessor symbols 
+
+OPSYS         = SUNCC
+#DFLAGS  = -D$(HDFSYS) -D$(OPSYS) -DIRIX -DPROTO #
+DFLAGS  = -D$(OPSYS) -DPROTO
+
+# path for #include directive
+IFLAG   = -I. -I$(LOCINC) -I$(HDFINC) -I$(PGSINC)
+#-I/usr/include/sys -I/usr/include/.unsupp -I/usr/include/.unsupp/sys
+
+# path for libraries linked (compiler will search in the order listed)
+LFLAG	= -L.  -L$(PGSLIB)
+
+# libraries linked for C build
+LIBS   = -lPGSTK
+
+# libraries linked for FORTRAN build
+F77LIBS = $(PGSLIB)/libPGSTK.a
+
+# object files from this sub-group needed to build library  
+
+LIBOFILES	= afm2bfm.o \
+                byteswap.o \
+                cv_units.o \
+                dbevents.o \
+                dbfree.o \
+                dbhdlen.o \
+                dl_lists.o \
+                dupform.o \
+                dvevents.o \
+                eqn_util.o \
+                error.o\
+                eval_eqn.o \
+                fflookup.o \
+                file2buf.o \
+                findfile.o \
+                findvar.o \
+                formlist.o \
+                freeform.o \
+                freeview.o \
+                frm2vlst.o \
+                geo44tim.o \
+                get_doub.o \
+                get_str.o \
+                get_val.o \
+                getcount.o \
+                latlon.o \
+                makedbin.o \
+                makeform.o \
+                makeindx.o \
+                makeview.o \
+		memtrack.o \
+                mkformat.o \
+                mkplist.o \
+		mkstdbin.o \
+                name_tab.o \
+                os_utils.o \
+                proclist.o \
+                qstack.o \
+		seismic.o \
+                set_var.o \
+                setdbin.o \
+                setview.o \
+                showdbin.o \
+                showform.o \
+                showvars.o \
+                showview.o \
+                skiphead.o \
+		str2bin.o \
+                strnstr.o \
+                time.o \
+                tytoty.o \
+                viewsize.o \
+                writform.o
+#
+# targets
+#
+all:
+	@echo "    TEST Makefile for AA/freeform; Target: all"
+	@case "$(HDFINC)" in	 \
+	    "") \
+	        echo "No HDF include directory specified - AA/freeform will NOT be built" ; \
+	        echo "" ; \
+	        ;; \
+	    *) \
+	        $(MAKE) $(MFLAGS) $(PGS_FLAGS) ff_all; \
+	        ;; \
+	esac                                
+
+ff_all: 	$(LIBOFILES)
+
+
+clean:
+	/bin/rm -f *.o core
+
+#
+# compilation rules
+#
+
+# compile C to executable
+.c:
+	$(CC) $(CFHFLAGS) $(DFLAGS) $(IFLAG) $(LFLAG) $< $(LIBS) -o $@ 
+	# mv $@ $(PGSBIN)
+
+# compile C to object
+.c.o:
+	case "$(BRAND)" in \
+	    cray) ff_flag="" ;; \
+	    dec)  ff_flag="DEC_ALPHA" ;; \
+	    hp) ff_flag="" ;; \
+	    ibm) ff_flag="" ;; \
+	    sco) ff_flag="" ;; \
+	    sgi) ff_flag="-DIRIX" ;; \
+	    sgi32) ff_flag="-DIRIX" ;; \
+	    sgi64) ff_flag="-DIRIX" ;; \
+	    sun4) ff_flag="SUN" ;; \
+	    sun5) ff_flag="SUN" ;; \
+            sun5.8) ff_flag="SUN" ;; \
+            sun5.9) ff_flag="SUN" ;; \
+            sun5.10) ff_flag="SUN" ;; \
+	    *) ff_flag="" ;; \
+	esac ; \
+	echo $(CC) -c $(CFHFLAGS) $(DFLAGS) $(IFLAG) $$ff_flag $<  ; \
+	$(CC) -c $(CFHFLAGS) $(DFLAGS) $(IFLAG) $$ff_flag $< 
+#	mv $@ $(PGSOBJ)/AA
+
+# compile FORTRAN to executable
+.f:	
+	$(F77) $(F77_CFH) $< $(F77LIBS) -o $@
+	# mv $@ $(PGSBIN)
+
+# compile FORTRAN to object
+.f.o:
+	$(F77) -c  $(F77_CFH) $< 
+	mv $@ $(PGSOBJ)/AA
+
+#
+# rule to copy FORTRAN include files from $PGSINC to working directory
+#
+
+finc:
+	@echo "Copying FORTRAN include files to local directory..."
+	@for file in $(FINCFILES);         \
+	do                                 \
+		echo $$file ;              \
+		if [ -f $$file ] ; then    \
+		    if [ ! -w $$file ] ; then \
+		    	chmod a+w $$file ; \
+		    fi;                    \
+		    rm $$file;		   \
+		fi;                        \
+		cp $(PGSINC)/$$file . ;    \
+		chmod a+w $$file ;         \
+	done

@@ -1,0 +1,1 @@
+#error db_free_index() has moved into makeindx.c

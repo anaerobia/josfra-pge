@@ -1,0 +1,1 @@
+#error get_var_space() has moved into set_var.c
