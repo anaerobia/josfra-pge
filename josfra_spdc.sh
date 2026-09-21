@@ -63,25 +63,50 @@ set_config_scalar() {
     sed -i -E "s|(<scalar name=\"${name}\">)[^<]*(</scalar>)|\1${escaped}\2|" "$LOCAL_CONFIG"
 }
 
-# Point the input product scalars at the CWL-staged files
-if [ -n "$L1C_FILE" ]; then
-    if [ -d "$L1C_FILE" ]; then
+mkdir -p ./inputs
+
+# Resolve an input product to a local file and store its absolute path
+# in RESOLVED_INPUT: an s3:// URI is downloaded into ./inputs/, a
+# STAC-staged directory is searched for the data file inside it, and a
+# plain file is used as given. This runs in the main shell rather than a
+# command substitution, so a failure exits the job instead of leaving an
+# empty scalar behind.
+resolve_input_file() {
+    local label="$1" source="$2" destination="$3" found
+    case "$source" in
+        s3://*)
+            aws s3 cp "$source" "$destination"
+            RESOLVED_INPUT=$(realpath "$destination")
+            return 0
+            ;;
+    esac
+    if [ -d "$source" ]; then
         # Directory type — STAC staged — find actual data file inside
-        ACTUAL_L1C=$(find "$L1C_FILE" -type f \( -name "*.hdf" -o -name "*.nc" -o -name "*.h5" \) | head -1)
-        echo "Found L1C inside STAC directory: $ACTUAL_L1C"
-        set_config_scalar AirsL1cFile "$(realpath "$ACTUAL_L1C")"
+        found=$(find "$source" -type f \( -name "*.hdf" -o -name "*.nc" -o -name "*.h5" \) | head -1)
+        if [ -z "$found" ]; then
+            echo "No .hdf/.nc/.h5 found in ${label} directory: $source" >&2
+            exit 1
+        fi
+        echo "Found ${label} inside STAC directory: $found"
     else
         # File type — use directly as before
-        set_config_scalar AirsL1cFile "$(realpath "$L1C_FILE")"
+        found="$source"
     fi
+    RESOLVED_INPUT=$(realpath "$found")
+}
+
+# Point the input product scalars at the resolved input files
+if [ -n "$L1C_FILE" ]; then
+    resolve_input_file L1C "$L1C_FILE" ./inputs/l1c_file
+    set_config_scalar AirsL1cFile "$RESOLVED_INPUT"
 fi
 
 if [ -n "$MOCCA_FILE" ]; then
-    set_config_scalar AirsMoccaFile "$(realpath "$MOCCA_FILE")"
+    resolve_input_file MOCCA "$MOCCA_FILE" ./inputs/mocca_file
+    set_config_scalar AirsMoccaFile "$RESOLVED_INPUT"
 fi
 
 # Optional forecast files — string type, download only if non-empty
-mkdir -p ./inputs
 
 if [ -n "$FORECAST_FILE_1" ]; then
     aws s3 cp "$FORECAST_FILE_1" ./inputs/forecast_file_1
