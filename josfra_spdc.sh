@@ -65,8 +65,17 @@ set_config_scalar() {
 
 # Point the input product scalars at the CWL-staged files
 if [ -n "$L1C_FILE" ]; then
-    set_config_scalar AirsL1cFile "$(realpath "$L1C_FILE")"
+    if [ -d "$L1C_FILE" ]; then
+        # Directory type — STAC staged — find actual data file inside
+        ACTUAL_L1C=$(find "$L1C_FILE" -type f \( -name "*.hdf" -o -name "*.nc" -o -name "*.h5" \) | head -1)
+        echo "Found L1C inside STAC directory: $ACTUAL_L1C"
+        set_config_scalar AirsL1cFile "$(realpath "$ACTUAL_L1C")"
+    else
+        # File type — use directly as before
+        set_config_scalar AirsL1cFile "$(realpath "$L1C_FILE")"
+    fi
 fi
+
 if [ -n "$MOCCA_FILE" ]; then
     set_config_scalar AirsMoccaFile "$(realpath "$MOCCA_FILE")"
 fi
