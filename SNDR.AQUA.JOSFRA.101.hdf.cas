@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cas:metadata xmlns:cas="http://oodt.jpl.nasa.gov/1.0/cas">
+
+<keyval type="vector">
+	<key>AggregateDir</key>
+	<val>aqua_l2_josfra</val>
+</keyval>
+<keyval type="vector">
+	<key>AlgorithmName</key>
+	<val>JOSFRA</val>
+</keyval>
+<keyval type="vector">
+	<key>AlgorithmProvider</key>
+	<val>JPL</val>
+</keyval>
+<keyval type="vector">
+	<key>AlgorithmVersion</key>
+	<val>JOSFRA Retrieval Version: JOSFRA_twoStep.L1B.V6tuning.0.08.10; AIRS L1B Version: 5.0.21.0; uses SARTA-PCLSAM-D4S 5-26-2022, D4S 1-20-2022</val>
+</keyval>
+<keyval type="vector">
+	<key>AutomaticQualityFlag</key>
+	<val>Passed</val>
+</keyval>
+<keyval type="vector">
+	<key>BuildId</key>
+	<val>v03.21.00</val>
+</keyval>
+<keyval type="vector">
+	<key>Collection</key>
+	<val>production</val>
+</keyval>
+<keyval type="vector">
+	<key>CollectionLabel</key>
+	<val>std</val>
+</keyval>
+<keyval type="vector">
+	<key>DataDuration</key>
+	<val>m06</val>
+</keyval>
+<keyval type="vector">
+	<key>DataGroup</key>
+	<val>sndr</val>
+</keyval>
+<keyval type="vector">
+	<key>DataProvider</key>
+	<val>albertli</val>
+</keyval>
+<keyval type="vector">
+	<key>DataVersion</key>
+	<val>v02_24_00</val>
+</keyval>
+<keyval type="vector">
+	<key>EndDateTime</key>
+	<val>2013-01-03T13:41:23.000Z</val>
+</keyval>
+<keyval type="vector">
+	<key>EndTAI93</key>
+	<val>631374091.0</val>
+</keyval>
+<keyval type="vector">
+	<key>FileFormat</key>
+	<val>nc</val>
+</keyval>
+<keyval type="vector">
+	<key>FileLocation</key>
+	<val>/home/albertli/deploy/pge_exe_dir/AIRSJosfra/2013-01-03_nom/2023-11-09_subm/90480011-f788-458d-9eca-e4cbf22dfd6f/cb58c0b4-192d-4fe8-8514-e0442d77572d</val>
+</keyval>
+<keyval type="vector">
+	<key>Filename</key>
+	<val>./SNDR.AQUA.JOSFRA.101.hdf</val>
+</keyval>
+<keyval type="vector">
+	<key>GranuleNumber</key>
+	<val>136</val>
+</keyval>
+<keyval type="vector">
+	<key>JobId</key>
+	<val>cb58c0b4-192d-4fe8-8514-e0442d77572d</val>
+</keyval>
+<keyval type="vector">
+	<key>Level2Type</key>
+	<val>RET.nc</val>
+</keyval>
+<keyval type="vector">
+	<key>ModelId</key>
+	<val>urn:npp:AIRSJosfraNewMocca</val>
+</keyval>
+<keyval type="vector">
+	<key>NodeInfo</key>
+	<val>smog.jpl.nasa.gov</val>
+</keyval>
+<keyval type="vector">
+	<key>NominalDate</key>
+	<val>2013-01-03</val>
+</keyval>
+<keyval type="vector">
+	<key>ProcessingLevel</key>
+	<val>L2</val>
+</keyval>
+<keyval type="vector">
+	<key>ProductName</key>
+	<val>AIRS.AQUA.AIRS.20130103T1335.m06.g136.L2_JOSFRA.std.v02_24_00.I.231109023325.nc</val>
+</keyval>
+<keyval type="vector">
+	<key>ProductType</key>
+	<val>AIRS_ARCHIVED_L2</val>
+</keyval>
+<keyval type="vector">
+	<key>ProductionDateTime</key>
+	<val>2023-11-09T02:33:25.000Z</val>
+</keyval>
+<keyval type="vector">
+	<key>ProductionLocation</key>
+	<val>JPL/Caltech Sounder SIPS Integration</val>
+</keyval>
+<keyval type="vector">
+	<key>ProductionLocationCode</key>
+	<val>I</val>
+</keyval>
+<keyval type="vector">
+	<key>RequestId</key>
+	<val>222</val>
+</keyval>
+<keyval type="vector">
+	<key>Resolution</key>
+	<val>NA</val>
+</keyval>
+<keyval type="vector">
+	<key>RetrievalType</key>
+	<val>IROnly</val>
+</keyval>
+<keyval type="vector">
+	<key>StartDateTime</key>
+	<val>2013-01-03T13:35:23.000Z</val>
+</keyval>
+<keyval type="vector">
+	<key>StartTAI93</key>
+	<val>631373731.0</val>
+</keyval>
+<keyval type="vector">
+	<key>SubCollection</key>
+	<val>v02_24_00</val>
+</keyval>
+<keyval type="vector">
+	<key>TaskId</key>
+	<val>90480011-f788-458d-9eca-e4cbf22dfd6f</val>
+</keyval>
+
+</cas:metadata>
