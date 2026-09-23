@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 from xml.sax.saxutils import escape
@@ -34,6 +34,7 @@ PRODUCTION_TIMESTAMP_FORMAT = "%y%m%d%H%M%S"
 CAS_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.000Z"
 CAS_DATE_FORMAT = "%Y-%m-%d"
 CAS_NAMESPACE = "http://oodt.jpl.nasa.gov/1.0/cas"
+GRANULE_DURATION_MINUTES = 6
 
 
 def get_scalar(root: ET.Element, group_name: str, scalar_name: str) -> str:
@@ -390,6 +391,11 @@ def build_cas_metadata(
     production time that build_output_basename uses; the remaining keys
     carry the template's fixed values.
 
+    EndDateTime is derived as StartDateTime plus the 6-minute granule
+    duration rather than read from the config, whose EndDateTime is a
+    millisecond short of the granule end and so would round down in the
+    CAS whole-second time format.
+
     Args:
         root: Root element of the parsed config XML.
         basename: The shared output basename from build_output_basename.
@@ -403,6 +409,7 @@ def build_cas_metadata(
     version = get_scalar(root, "PrimaryExecutable", "Version")
 
     granule_dt = datetime.strptime(start_date_time, CONFIG_TIME_FORMAT)
+    granule_end_dt = granule_dt + timedelta(minutes=GRANULE_DURATION_MINUTES)
     product_name = f"{basename}.nc"
 
     return {
@@ -418,7 +425,7 @@ def build_cas_metadata(
         "DataGroup": "sndr",
         "DataProvider": "albertli",
         "DataVersion": "v02_24_00",
-        "EndDateTime": "2013-01-03T13:41:23.000Z",
+        "EndDateTime": granule_end_dt.strftime(CAS_TIME_FORMAT),
         "EndTAI93": "631374091.0",
         "FileFormat": "nc",
         "FileLocation": (
