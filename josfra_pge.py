@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import random
 import string
 import subprocess
@@ -28,6 +29,9 @@ EXECUTABLE_DIR = Path(__file__).resolve().parent
 GET_BUILD_ID_PATH = EXECUTABLE_DIR / "getBuildId"
 TAI_TO_UTC_PATH = EXECUTABLE_DIR / "taiToUtc"
 TAI_TO_UTC_ARGS = ["01"]
+TOOLKIT_DIR = EXECUTABLE_DIR / "TOOLKIT"
+TOOLKIT_MESSAGE_DIR = TOOLKIT_DIR / "message"
+TOOLKIT_PCF_PATH = EXECUTABLE_DIR / "SNDR.PGSToolkit_ProcessControlFile.pcf"
 
 CONFIG_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 PRODUCTION_TIMESTAMP_FORMAT = "%y%m%d%H%M%S"
@@ -276,7 +280,34 @@ def log_directory_listing(
     logging.info("Random string: %s", generate_random_string(RANDOM_STRING_LENGTH))
 
 
-def log_executable(executable: Path, args: list[str] | None = None) -> int | None:
+def toolkit_environment() -> dict[str, str]:
+    """Build the environment the SDP Toolkit executables need.
+
+    The bundled toolkit programs (taiToUtc, utcToTai) resolve every file
+    they read through the Process Control File, so without these variables
+    they cannot find leapsec.dat and fail with "No leap seconds correction
+    available". PGS_PC_INFO_FILE names the PCF, PGSHOME is substituted for
+    the leading "~" of the paths inside it, and PGSMSG locates the SMF
+    message files used to format toolkit status messages.
+
+    Values already present in the environment win, so an image that ships
+    its own toolkit installation keeps using it.
+
+    Returns:
+        A copy of the current environment with the toolkit variables set.
+    """
+    env = dict(os.environ)
+    env.setdefault("PGSHOME", str(TOOLKIT_DIR))
+    env.setdefault("PGSMSG", str(TOOLKIT_MESSAGE_DIR))
+    env.setdefault("PGS_PC_INFO_FILE", str(TOOLKIT_PCF_PATH))
+    return env
+
+
+def log_executable(
+    executable: Path,
+    args: list[str] | None = None,
+    env: dict[str, str] | None = None,
+) -> int | None:
     """Run a bundled C++ executable and log its result.
 
     Logs the executable's exit status along with its stdout and stderr. If
@@ -286,6 +317,7 @@ def log_executable(executable: Path, args: list[str] | None = None) -> int | Non
     Args:
         executable: Path to the executable to run.
         args: Command-line arguments to pass, or None to pass none.
+        env: Environment to run under, or None to inherit this process's.
 
     Returns:
         The executable's exit status, or None if it could not be run.
@@ -294,7 +326,9 @@ def log_executable(executable: Path, args: list[str] | None = None) -> int | Non
     label = " ".join(command)
 
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            command, capture_output=True, text=True, check=False, env=env
+        )
     except OSError as exc:
         logging.error("Failed to run %s: %s", label, exc)
         return None
@@ -537,7 +571,7 @@ def main() -> None:
     logging.info("Config file %s contents:\n%s", config_path, config_contents)
     log_directory_listing(directory_listing, inputs_listing)
     log_executable(GET_BUILD_ID_PATH)
-    log_executable(TAI_TO_UTC_PATH, TAI_TO_UTC_ARGS)
+    log_executable(TAI_TO_UTC_PATH, TAI_TO_UTC_ARGS, env=toolkit_environment())
     if config_path != Path(args.config_file):
         logging.info("Resolved config to local file: %s", config_path)
 
