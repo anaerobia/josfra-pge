@@ -330,7 +330,8 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
             the CAS ProductionDateTime describe the same instant.
 
     Returns:
-        The basename shared by the .nc, .log, and .cas outputs.
+        The basename shared by the .nc and .cas outputs. The processing
+        log is named by the log_filename argument instead.
     """
     start_date_time = get_scalar(root, "GranuleIdentification", "StartDateTime")
     start_granule_number = get_scalar(root, "GranuleIdentification", "StartGranuleNumber")
