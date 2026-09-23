@@ -1,7 +1,7 @@
 """JOSFRA PGE demo algorithm for MAAP DPS.
 
 Reads a JOSFRA-style XML config file and produces a NetCDF product,
-a CAS metadata file (scalar names only), and a processing log.
+a CAS metadata file, and a processing log.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
+from xml.sax.saxutils import escape
 
 import boto3
 from netCDF4 import Dataset
@@ -27,6 +28,12 @@ EXECUTABLE_DIR = Path(__file__).resolve().parent
 GET_BUILD_ID_PATH = EXECUTABLE_DIR / "getBuildId"
 TAI_TO_UTC_PATH = EXECUTABLE_DIR / "taiToUtc"
 TAI_TO_UTC_ARGS = ["01"]
+
+CONFIG_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+PRODUCTION_TIMESTAMP_FORMAT = "%y%m%d%H%M%S"
+CAS_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.000Z"
+CAS_DATE_FORMAT = "%Y-%m-%d"
+CAS_NAMESPACE = "http://oodt.jpl.nasa.gov/1.0/cas"
 
 
 def get_scalar(root: ET.Element, group_name: str, scalar_name: str) -> str:
@@ -310,7 +317,7 @@ def generate_random_string(length: int) -> str:
     return "".join(random.choices(string.ascii_letters + string.digits, k=length))
 
 
-def build_output_basename(root: ET.Element) -> str:
+def build_output_basename(root: ET.Element, production_time: datetime) -> str:
     """Derive the shared output product basename from the config.
 
     The basename follows the JOSFRA naming convention:
@@ -318,6 +325,9 @@ def build_output_basename(root: ET.Element) -> str:
 
     Args:
         root: Root element of the parsed config XML.
+        production_time: Time this run produced its outputs. Passed in
+            rather than read from the clock here so that the basename and
+            the CAS ProductionDateTime describe the same instant.
 
     Returns:
         The basename shared by the .nc, .log, and .cas outputs.
@@ -326,9 +336,9 @@ def build_output_basename(root: ET.Element) -> str:
     start_granule_number = get_scalar(root, "GranuleIdentification", "StartGranuleNumber")
     version = get_scalar(root, "PrimaryExecutable", "Version")
 
-    granule_dt = datetime.strptime(start_date_time, "%Y-%m-%dT%H:%M:%S.%fZ")
+    granule_dt = datetime.strptime(start_date_time, CONFIG_TIME_FORMAT)
     timestamp = granule_dt.strftime("%Y%m%dT%H%M")
-    production_timestamp = datetime.now().strftime("%y%m%d%H%M%S")
+    production_timestamp = production_time.strftime(PRODUCTION_TIMESTAMP_FORMAT)
 
     return (
         f"SNDR.AQUA.AIRS.{timestamp}.m06.g{start_granule_number}"
@@ -369,15 +379,112 @@ def write_netcdf(root: ET.Element, output_path: Path) -> None:
             setattr(input_group, name, value)
 
 
-def write_cas_file(root: ET.Element, output_path: Path) -> None:
-    """Write the CAS file listing every scalar name found in the config.
+def build_cas_metadata(
+    root: ET.Element, basename: str, production_time: datetime
+) -> dict[str, str]:
+    """Build the CAS key/value metadata for this run's product.
+
+    Keys and their order follow the SNDR.AQUA.JOSFRA.101.hdf.cas template.
+    The granule-specific keys are filled from the same config values and
+    production time that build_output_basename uses; the remaining keys
+    carry the template's fixed values.
+
+    Args:
+        root: Root element of the parsed config XML.
+        basename: The shared output basename from build_output_basename.
+        production_time: Time this run produced its outputs.
+
+    Returns:
+        A mapping of CAS key to value, in the order it should be written.
+    """
+    start_date_time = get_scalar(root, "GranuleIdentification", "StartDateTime")
+    granule_number = get_scalar(root, "GranuleIdentification", "StartGranuleNumber")
+    version = get_scalar(root, "PrimaryExecutable", "Version")
+
+    granule_dt = datetime.strptime(start_date_time, CONFIG_TIME_FORMAT)
+    product_name = f"{basename}.nc"
+
+    return {
+        "AggregateDir": "aqua_l2_josfra",
+        "AlgorithmName": "JOSFRA",
+        "AlgorithmProvider": "JPL",
+        "AlgorithmVersion": version,
+        "AutomaticQualityFlag": "Passed",
+        "BuildId": "v03.21.00",
+        "Collection": "production",
+        "CollectionLabel": "std",
+        "DataDuration": "m06",
+        "DataGroup": "sndr",
+        "DataProvider": "albertli",
+        "DataVersion": "v02_24_00",
+        "EndDateTime": "2013-01-03T13:41:23.000Z",
+        "EndTAI93": "631374091.0",
+        "FileFormat": "nc",
+        "FileLocation": (
+            "/home/albertli/deploy/pge_exe_dir/AIRSJosfra/2013-01-03_nom"
+            "/2023-11-09_subm/90480011-f788-458d-9eca-e4cbf22dfd6f"
+            "/cb58c0b4-192d-4fe8-8514-e0442d77572d"
+        ),
+        "Filename": product_name,
+        "GranuleNumber": granule_number,
+        "JobId": "cb58c0b4-192d-4fe8-8514-e0442d77572d",
+        "Level2Type": "RET.nc",
+        "ModelId": "urn:npp:AIRSJosfraNewMocca",
+        "NodeInfo": "smog.jpl.nasa.gov",
+        "NominalDate": granule_dt.strftime(CAS_DATE_FORMAT),
+        "ProcessingLevel": "L2",
+        "ProductName": product_name,
+        "ProductType": "AIRS_ARCHIVED_L2",
+        "ProductionDateTime": production_time.strftime(CAS_TIME_FORMAT),
+        "ProductionLocation": "JPL/Caltech Sounder SIPS Integration",
+        "ProductionLocationCode": "I",
+        "RequestId": "222",
+        "Resolution": "NA",
+        "RetrievalType": "IROnly",
+        "StartDateTime": granule_dt.strftime(CAS_TIME_FORMAT),
+        "StartTAI93": "631373731.0",
+        "SubCollection": "v02_24_00",
+        "TaskId": "90480011-f788-458d-9eca-e4cbf22dfd6f",
+    }
+
+
+def render_cas_metadata(metadata: dict[str, str]) -> str:
+    """Render CAS metadata as an OODT cas:metadata XML document.
+
+    Args:
+        metadata: Mapping of CAS key to value, in write order.
+
+    Returns:
+        The XML document text, matching the layout of the CAS template.
+    """
+    keyvals = [
+        "<keyval type=\"vector\">\n"
+        f"\t<key>{escape(key)}</key>\n"
+        f"\t<val>{escape(value)}</val>\n"
+        "</keyval>"
+        for key, value in metadata.items()
+    ]
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<cas:metadata xmlns:cas="{CAS_NAMESPACE}">\n\n'
+        + "\n".join(keyvals)
+        + "\n\n</cas:metadata>\n"
+    )
+
+
+def write_cas_file(
+    root: ET.Element, output_path: Path, basename: str, production_time: datetime
+) -> None:
+    """Write the CAS metadata file for this run's product.
 
     Args:
         root: Root element of the parsed config XML.
         output_path: Destination path for the .cas file.
+        basename: The shared output basename from build_output_basename.
+        production_time: Time this run produced its outputs.
     """
-    scalar_names = [scalar.get("name", "") for scalar in root.iter("scalar")]
-    output_path.write_text("\n".join(scalar_names) + "\n", encoding="utf-8")
+    metadata = build_cas_metadata(root, basename, production_time)
+    output_path.write_text(render_cas_metadata(metadata), encoding="utf-8")
 
 
 def main() -> None:
@@ -407,7 +514,8 @@ def main() -> None:
         raise SystemExit(f"Config file is empty: {config_path}")
 
     root = ET.parse(config_path).getroot()
-    basename = build_output_basename(root)
+    production_time = datetime.now()
+    basename = build_output_basename(root, production_time)
 
     log_path = resolve_log_path(args.log_filename)
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -430,7 +538,7 @@ def main() -> None:
     logging.info("Wrote NetCDF output: %s", nc_path)
 
     cas_path = OUTPUT_DIR / f"{basename}.cas"
-    write_cas_file(root, cas_path)
+    write_cas_file(root, cas_path, basename, production_time)
     logging.info("Wrote CAS output: %s", cas_path)
 
     logging.info("JOSFRA PGE processing complete.")
