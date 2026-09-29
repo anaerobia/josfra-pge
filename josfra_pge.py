@@ -365,7 +365,7 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
             the CAS ProductionDateTime describe the same instant.
 
     Returns:
-        The basename shared by the .nc and .cas outputs. The processing
+        The basename shared by the .nc and .nc.cas outputs. The processing
         log is named by the log_filename argument instead.
     """
     start_date_time = get_scalar(root, "GranuleIdentification", "StartDateTime")
@@ -521,7 +521,7 @@ def write_cas_file(
 
     Args:
         root: Root element of the parsed config XML.
-        output_path: Destination path for the .cas file.
+        output_path: Destination path for the .nc.cas file.
         basename: The shared output basename from build_output_basename.
         production_time: Time this run produced its outputs.
     """
@@ -579,7 +579,7 @@ def main() -> None:
     write_netcdf(root, nc_path)
     logging.info("Wrote NetCDF output: %s", nc_path)
 
-    cas_path = OUTPUT_DIR / f"{basename}.cas"
+    cas_path = OUTPUT_DIR / f"{basename}.nc.cas"
     write_cas_file(root, cas_path, basename, production_time)
     logging.info("Wrote CAS output: %s", cas_path)
 
