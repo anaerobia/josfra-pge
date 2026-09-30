@@ -24,7 +24,17 @@ import boto3
 from netCDF4 import Dataset
 
 OUTPUT_DIR = Path("output")
-RANDOM_STRING_LENGTH = 5000
+
+# The product is padded with a random string so each granule has its own
+# plausible file size instead of every run producing an identical one.
+# Drawn from 11 operational L2_JOSFRA granules, which ranged from
+# 12,039,086 to 15,508,331 bytes with a mean of 13,311,048 and a
+# standard deviation of about 1,020,000.
+NC_SIZE_MEAN_BYTES = 13_311_048
+NC_SIZE_STDEV_BYTES = 1_020_000
+NC_SIZE_MIN_BYTES = 12_039_086
+NC_SIZE_MAX_BYTES = 15_508_331
+NC_SIZE_DRAW_ATTEMPTS = 10
 EXECUTABLE_DIR = Path(__file__).resolve().parent
 GET_BUILD_ID_PATH = EXECUTABLE_DIR / "getBuildId"
 TAI_TO_UTC_PATH = EXECUTABLE_DIR / "taiToUtc"
@@ -277,7 +287,6 @@ def log_directory_listing(
     if inputs_listing.stderr:
         logging.info("ls -la /inputs/ stderr:\n%s", inputs_listing.stderr)
 
-    logging.info("Random string: %s", generate_random_string(RANDOM_STRING_LENGTH))
 
 
 def toolkit_environment() -> dict[str, str]:
@@ -352,6 +361,25 @@ def generate_random_string(length: int) -> str:
     return "".join(random.choices(string.ascii_letters + string.digits, k=length))
 
 
+def random_padding_length() -> int:
+    """Pick a padding length so the product gets a plausible file size.
+
+    Sampled from a normal distribution fitted to operational L2_JOSFRA
+    granule sizes, redrawing until the value lands inside the range those
+    granules covered. Out-of-range draws are redrawn rather than clamped,
+    since clamping would make separate runs land on exactly the same
+    boundary size.
+
+    Returns:
+        Number of random characters to store in the product.
+    """
+    for _ in range(NC_SIZE_DRAW_ATTEMPTS):
+        length = int(random.gauss(NC_SIZE_MEAN_BYTES, NC_SIZE_STDEV_BYTES))
+        if NC_SIZE_MIN_BYTES <= length <= NC_SIZE_MAX_BYTES:
+            return length
+    return random.randint(NC_SIZE_MIN_BYTES, NC_SIZE_MAX_BYTES)
+
+
 def build_output_basename(root: ET.Element, production_time: datetime) -> str:
     """Derive the shared output product basename from the config.
 
@@ -385,10 +413,11 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
 def write_netcdf(root: ET.Element, output_path: Path) -> None:
     """Write the NetCDF product derived from the config file.
 
-    StartGranuleNumber, StartDateTime, Version, and a random 5000-character
-    RandomString become global attributes. DynamicAuxiliaryInputFiles and
-    InputProductFiles become groups, with each scalar in them stored as a
-    group attribute.
+    StartGranuleNumber, StartDateTime, Version, and a RandomString of
+    random length become global attributes; the RandomString gives the
+    product a plausible, per-granule file size. DynamicAuxiliaryInputFiles
+    and InputProductFiles become groups, with each scalar in them stored
+    as a group attribute.
 
     Args:
         root: Root element of the parsed config XML.
@@ -404,7 +433,7 @@ def write_netcdf(root: ET.Element, output_path: Path) -> None:
         dataset.StartGranuleNumber = int(start_granule_number)
         dataset.StartDateTime = start_date_time
         dataset.Version = version
-        dataset.RandomString = generate_random_string(RANDOM_STRING_LENGTH)
+        dataset.RandomString = generate_random_string(random_padding_length())
 
         aux_group = dataset.createGroup("DynamicAuxiliaryInputFiles")
         for name, value in dynamic_aux_files.items():
