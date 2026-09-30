@@ -356,7 +356,7 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
     """Derive the shared output product basename from the config.
 
     The basename follows the JOSFRA naming convention:
-    SNDR.AQUA.AIRS.<timestamp>.m06.g<granule>.JOSFRA.std.<version>.I.<production_timestamp>
+    SNDR.AQUA.AIRS.<timestamp>.m06.g<granule>.JOSFRA.std.<version>.i.<production_timestamp>
 
     Args:
         root: Root element of the parsed config XML.
@@ -378,7 +378,7 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
 
     return (
         f"SNDR.AQUA.AIRS.{timestamp}.m06.g{start_granule_number}"
-        f".JOSFRA.std.{version}.I.{production_timestamp}"
+        f".JOSFRA.std.{version}.i.{production_timestamp}"
     )
 
 
