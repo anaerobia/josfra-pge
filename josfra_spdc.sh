@@ -83,26 +83,41 @@ fi
 # Optional forecast files — string type, download only if non-empty
 mkdir -p ./inputs
 
+# Download a forecast file, failing the job if it is not there. aws s3 cp
+# already exits non-zero on a missing object, but the message it prints
+# does not say which input was at fault.
+download_forecast() {
+    local label="$1" uri="$2" destination="$3"
+    if ! aws s3 cp "$uri" "$destination"; then
+        echo "Failed to download ${label}: $uri" >&2
+        exit 1
+    fi
+    if [ ! -s "$destination" ]; then
+        echo "Downloaded ${label} is empty: $uri" >&2
+        exit 1
+    fi
+}
+
 if [ -n "$FORECAST_FILE_1" ]; then
-    aws s3 cp "$FORECAST_FILE_1" ./inputs/forecast_file_1
+    download_forecast forecast_file_1 "$FORECAST_FILE_1" ./inputs/forecast_file_1
 else
     echo "forecast_file_1 not provided, skipping"
 fi
 
 if [ -n "$FORECAST_FILE_2" ]; then
-    aws s3 cp "$FORECAST_FILE_2" ./inputs/forecast_file_2
+    download_forecast forecast_file_2 "$FORECAST_FILE_2" ./inputs/forecast_file_2
 else
     echo "forecast_file_2 not provided, skipping"
 fi
 
 if [ -n "$FORECAST_FILE_3" ]; then
-    aws s3 cp "$FORECAST_FILE_3" ./inputs/forecast_file_3
+    download_forecast forecast_file_3 "$FORECAST_FILE_3" ./inputs/forecast_file_3
 else
     echo "forecast_file_3 not provided, skipping"
 fi
 
 if [ -n "$FORECAST_FILE_4" ]; then
-    aws s3 cp "$FORECAST_FILE_4" ./inputs/forecast_file_4
+    download_forecast forecast_file_4 "$FORECAST_FILE_4" ./inputs/forecast_file_4
 else
     echo "forecast_file_4 not provided, skipping"
 fi
