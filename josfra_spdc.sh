@@ -85,15 +85,12 @@ mkdir -p ./inputs
 
 # Download a forecast file, failing the job if it is not there. aws s3 cp
 # already exits non-zero on a missing object, but the message it prints
-# does not say which input was at fault.
+# does not say which input was at fault. A zero-byte object is a valid
+# forecast input and is left alone.
 download_forecast() {
     local label="$1" uri="$2" destination="$3"
     if ! aws s3 cp "$uri" "$destination"; then
         echo "Failed to download ${label}: $uri" >&2
-        exit 1
-    fi
-    if [ ! -s "$destination" ]; then
-        echo "Downloaded ${label} is empty: $uri" >&2
         exit 1
     fi
 }
