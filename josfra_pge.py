@@ -48,6 +48,10 @@ PRODUCTION_TIMESTAMP_FORMAT = "%y%m%d%H%M%S"
 CAS_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.000Z"
 CAS_DATE_FORMAT = "%Y-%m-%d"
 CAS_NAMESPACE = "http://oodt.jpl.nasa.gov/1.0/cas"
+DATA_VERSION = "v08_00_15"
+PRODUCTION_LOCATION_CODE = "i"
+REQUEST_ID = "SIS-FAKE"
+DATA_PROVIDER = "nppint"
 GRANULE_DURATION_MINUTES = 6
 
 
@@ -384,7 +388,7 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
     """Derive the shared output product basename from the config.
 
     The basename follows the JOSFRA naming convention:
-    SNDR.AQUA.AIRS.<timestamp>.m06.g<granule>.JOSFRA.std.<version>.i.<production_timestamp>
+    SNDR.AQUA.AIRS.<timestamp>.m06.g<granule>.JOSFRA.std.<DATA_VERSION>.i.<production_timestamp>
 
     Args:
         root: Root element of the parsed config XML.
@@ -398,7 +402,6 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
     """
     start_date_time = get_scalar(root, "GranuleIdentification", "StartDateTime")
     start_granule_number = get_scalar(root, "GranuleIdentification", "StartGranuleNumber")
-    version = get_scalar(root, "PrimaryExecutable", "Version")
 
     granule_dt = datetime.strptime(start_date_time, CONFIG_TIME_FORMAT)
     timestamp = granule_dt.strftime("%Y%m%dT%H%M")
@@ -406,7 +409,7 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
 
     return (
         f"SNDR.AQUA.AIRS.{timestamp}.m06.g{start_granule_number}"
-        f".JOSFRA.std.{version}.i.{production_timestamp}"
+        f".JOSFRA.std.{DATA_VERSION}.i.{production_timestamp}"
     )
 
 
@@ -486,8 +489,8 @@ def build_cas_metadata(
         "CollectionLabel": "std",
         "DataDuration": "m06",
         "DataGroup": "sndr",
-        "DataProvider": "albertli",
-        "DataVersion": "v02_24_00",
+        "DataProvider": DATA_PROVIDER,
+        "DataVersion": DATA_VERSION,
         "EndDateTime": granule_end_dt.strftime(CAS_TIME_FORMAT),
         "EndTAI93": "631374091.0",
         "FileFormat": "nc",
@@ -508,13 +511,13 @@ def build_cas_metadata(
         "ProductType": "AIRS_ARCHIVED_L2",
         "ProductionDateTime": production_time.strftime(CAS_TIME_FORMAT),
         "ProductionLocation": "JPL/Caltech Sounder SIPS Integration",
-        "ProductionLocationCode": "I",
-        "RequestId": "222",
+        "ProductionLocationCode": PRODUCTION_LOCATION_CODE,
+        "RequestId": REQUEST_ID,
         "Resolution": "NA",
         "RetrievalType": "IROnly",
         "StartDateTime": granule_dt.strftime(CAS_TIME_FORMAT),
         "StartTAI93": "631373731.0",
-        "SubCollection": "v02_24_00",
+        "SubCollection": DATA_VERSION,
         "TaskId": "90480011-f788-458d-9eca-e4cbf22dfd6f",
     }
 
