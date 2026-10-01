@@ -388,7 +388,7 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
     """Derive the shared output product basename from the config.
 
     The basename follows the JOSFRA naming convention:
-    SNDR.AQUA.AIRS.<timestamp>.m06.g<granule>.JOSFRA.std.<version>.i.<production_timestamp>
+    SNDR.AQUA.AIRS.<timestamp>.m06.g<granule>.JOSFRA.std.<DATA_VERSION>.i.<production_timestamp>
 
     Args:
         root: Root element of the parsed config XML.
@@ -402,7 +402,6 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
     """
     start_date_time = get_scalar(root, "GranuleIdentification", "StartDateTime")
     start_granule_number = get_scalar(root, "GranuleIdentification", "StartGranuleNumber")
-    version = get_scalar(root, "PrimaryExecutable", "Version")
 
     granule_dt = datetime.strptime(start_date_time, CONFIG_TIME_FORMAT)
     timestamp = granule_dt.strftime("%Y%m%dT%H%M")
@@ -410,7 +409,7 @@ def build_output_basename(root: ET.Element, production_time: datetime) -> str:
 
     return (
         f"SNDR.AQUA.AIRS.{timestamp}.m06.g{start_granule_number}"
-        f".JOSFRA.std.{version}.i.{production_timestamp}"
+        f".JOSFRA.std.{DATA_VERSION}.i.{production_timestamp}"
     )
 
 
@@ -518,7 +517,7 @@ def build_cas_metadata(
         "RetrievalType": "IROnly",
         "StartDateTime": granule_dt.strftime(CAS_TIME_FORMAT),
         "StartTAI93": "631373731.0",
-        "SubCollection": "v02_24_00",
+        "SubCollection": DATA_VERSION,
         "TaskId": "90480011-f788-458d-9eca-e4cbf22dfd6f",
     }
 
