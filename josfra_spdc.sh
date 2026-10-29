@@ -1,9 +1,28 @@
 #!/bin/bash
-set -ex
+#
+# josfra_spdc.sh -- MAAP DPS run command for the JOSFRA L2 PGE.
+#
+# The PGE and its environment are in the container image
+# (anaerobia/josfra:<tag>). This script stages the DPS inputs, then starts
+# the SPSS DPS entry point josfra_docker.sh in the image.
+#
+# Usage:
+#   josfra_spdc.sh --config_file <f> --l1c_file <f|dir> --mocca_file <f|dir> \
+#                  --forecast_file_1 <s3-uri|f> [--forecast_file_2 <s3-uri|f>] \
+#                  [--forecast_file_3 <s3-uri|f>] [--forecast_file_4 <s3-uri|f>] \
+#                  [--log_filename <f>]
+#
+# A forecast input is an S3 URI or a local file. The script downloads an S3
+# URI to ./inputs with its own file name: josfra_docker.sh matches each
+# forecast to the config by the valid time and forecast hour in that name.
+#
+# The product, the .cas file and the log go in ./output.
+#
+set -euo pipefail
 
-echo "SHELL PWD: $(pwd)"
-echo "SHELL ls ./*:"
-ls ./* 2>/dev/null || echo "(empty)"
+JOSFRA_DOCKER=${JOSFRA_DOCKER:-/opt/spss/src/sips_pge/l2_josfra/scripts/josfra_docker.sh}
+
+die() { echo "josfra-pge: $*" >&2; exit 2; }
 
 # An unset optional CWL string arrives as a literal "" (or ''), which is
 # not an empty value to the shell; strip the quotes so [ -n ] works
@@ -14,124 +33,88 @@ unquote() {
     printf '%s' "$value"
 }
 
-# Parse named arguments from OGC CWL runner
+CONFIG_FILE=""
+LOG_FILENAME=""
+L1C_FILE=""
+MOCCA_FILE=""
+FORECAST_URIS=()
+
 while [[ $# -gt 0 ]]; do
+    [[ $# -ge 2 ]] || die "no value for $1"
     case $1 in
-        --config_file)      CONFIG_FILE="$(unquote "$2")";      shift 2 ;;
-        --log_filename)     LOG_FILENAME="$(unquote "$2")";     shift 2 ;;
-        --l1c_file)         L1C_FILE="$(unquote "$2")";         shift 2 ;;
-        --mocca_file)       MOCCA_FILE="$(unquote "$2")";       shift 2 ;;
-        --forecast_file_1)  FORECAST_FILE_1="$(unquote "$2")";  shift 2 ;;
-        --forecast_file_2)  FORECAST_FILE_2="$(unquote "$2")";  shift 2 ;;
-        --forecast_file_3)  FORECAST_FILE_3="$(unquote "$2")";  shift 2 ;;
-        --forecast_file_4)  FORECAST_FILE_4="$(unquote "$2")";  shift 2 ;;
-        *)                  shift ;;
+        --config_file)  CONFIG_FILE="$(unquote "$2")" ;;
+        --log_filename) LOG_FILENAME="$(unquote "$2")" ;;
+        --l1c_file)     L1C_FILE="$(unquote "$2")" ;;
+        --mocca_file)   MOCCA_FILE="$(unquote "$2")" ;;
+        --forecast_file_[1-4])
+            value="$(unquote "$2")"
+            if [ -n "$value" ]; then
+                FORECAST_URIS+=("$value")
+            fi
+            ;;
+        *) echo "josfra-pge: ignoring unknown argument $1" ;;
     esac
+    shift 2
 done
 
-# Show what the runner actually handed us for config_file
-echo "config_file: $CONFIG_FILE"
-ls -la "$CONFIG_FILE" || true
+[ -n "$CONFIG_FILE" ] || die "--config_file is required"
+[ -n "$L1C_FILE" ]    || die "--l1c_file is required"
+[ -n "$MOCCA_FILE" ]  || die "--mocca_file is required"
+[ ${#FORECAST_URIS[@]} -gt 0 ] || die "at least one --forecast_file_N is required"
 
-# The config file is copied and edited below, so it must be a local file
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "config_file is not a local file: $CONFIG_FILE" >&2
-    exit 1
-fi
-if [ ! -s "$CONFIG_FILE" ]; then
-    echo "config_file is empty: $CONFIG_FILE" >&2
-    echo "Check that the CWL config_file input points at the PGE XML config." >&2
-    exit 1
-fi
-
-# Copy the config to a writable local path first; the CWL-staged copy
-# may be read-only
-LOCAL_CONFIG=./pge_config_local.xml
-cp -f "$CONFIG_FILE" "$LOCAL_CONFIG"
-chmod u+w "$LOCAL_CONFIG"
-
-# Rewrite a <scalar name="..."> value in the local config copy. Scalars
-# that are not required are absent from some configs; skip those rather
-# than failing.
-set_config_scalar() {
-    local name="$1" value="$2" escaped
-    if ! grep -q "<scalar name=\"${name}\">" "$LOCAL_CONFIG"; then
-        echo "scalar ${name} not present in config, skipping"
-        return 0
+# A STAC-staged input is a directory; use the first data file in it
+resolve_input() {
+    local label="$1" path="$2" found
+    if [ -d "$path" ]; then
+        found=$(find "$path" -type f \( -name '*.nc' -o -name '*.hdf' -o -name '*.h5' \) | sort | head -1)
+        [ -n "$found" ] || die "$label: no .nc, .hdf or .h5 file in directory $path"
+        echo "josfra-pge: $label: using $found from STAC directory" >&2
+        path="$found"
     fi
-    escaped=$(printf '%s' "$value" | sed -e 's/[\\&|]/\\&/g')
-    sed -i -E "s|(<scalar name=\"${name}\">)[^<]*(</scalar>)|\1${escaped}\2|" "$LOCAL_CONFIG"
+    [ -f "$path" ] || die "$label not found: $path"
+    realpath "$path"
 }
 
-# Point the input product scalars at the CWL-staged files
-if [ -n "$L1C_FILE" ]; then
-    if [ -d "$L1C_FILE" ]; then
-        # Directory type — STAC staged
-        ACTUAL_L1C=$(find "$L1C_FILE" -type f \( -name "*.nc" -o -name "*.hdf" \) | head -1)
-        echo "Found L1C inside STAC directory: $ACTUAL_L1C"
-        set_config_scalar AirsL1cFile "$(realpath "$ACTUAL_L1C")"
-    else
-        # File type — use directly
-        set_config_scalar AirsL1cFile "$(realpath "$L1C_FILE")"
-    fi
-fi
+CONFIG=$(resolve_input config_file "$CONFIG_FILE")
+L1C=$(resolve_input l1c_file "$L1C_FILE")
+MOCCA=$(resolve_input mocca_file "$MOCCA_FILE")
 
-if [ -n "$MOCCA_FILE" ]; then
-    set_config_scalar AirsMoccaFile "$(realpath "$MOCCA_FILE")"
-fi
-
-# Optional forecast files — string type, download only if non-empty
+# Download each S3 forecast with its own name. A zero-byte object is a
+# valid forecast input and is left alone.
 mkdir -p ./inputs
-
-# Download a forecast file, failing the job if it is not there. aws s3 cp
-# already exits non-zero on a missing object, but the message it prints
-# does not say which input was at fault. A zero-byte object is a valid
-# forecast input and is left alone.
-download_forecast() {
-    local label="$1" uri="$2" destination="$3"
-    if ! aws s3 cp "$uri" "$destination"; then
-        echo "Failed to download ${label}: $uri" >&2
-        exit 1
+FORECAST_ARGS=()
+for uri in "${FORECAST_URIS[@]}"; do
+    if [ -f "$uri" ]; then
+        local_file="$uri"
+    elif [[ "$uri" == s3://* ]]; then
+        local_file="./inputs/$(basename "$uri")"
+        if ! aws s3 cp --no-progress "$uri" "$local_file"; then
+            die "failed to download forecast: $uri"
+        fi
+    else
+        die "forecast is not a local file or an s3:// URI: $uri"
     fi
-}
+    FORECAST_ARGS+=(--forecast "$(realpath "$local_file")")
+done
 
-if [ -n "$FORECAST_FILE_1" ]; then
-    download_forecast forecast_file_1 "$FORECAST_FILE_1" ./inputs/forecast_file_1
-else
-    echo "forecast_file_1 not provided, skipping"
-fi
+export OUTPUT_DIR="${OUTPUT_DIR:-$PWD/output}"
+mkdir -p "$OUTPUT_DIR"
+LOG="${LOG_FILENAME:-josfra.log}"
+case "$LOG" in
+    /*) ;;
+    *)  LOG="$OUTPUT_DIR/$LOG" ;;
+esac
 
-if [ -n "$FORECAST_FILE_2" ]; then
-    download_forecast forecast_file_2 "$FORECAST_FILE_2" ./inputs/forecast_file_2
-else
-    echo "forecast_file_2 not provided, skipping"
-fi
+echo "josfra-pge: config:   $CONFIG"
+echo "josfra-pge: l1c:      $L1C"
+echo "josfra-pge: mocca:    $MOCCA"
+echo "josfra-pge: log:      $LOG"
 
-if [ -n "$FORECAST_FILE_3" ]; then
-    download_forecast forecast_file_3 "$FORECAST_FILE_3" ./inputs/forecast_file_3
-else
-    echo "forecast_file_3 not provided, skipping"
-fi
-
-if [ -n "$FORECAST_FILE_4" ]; then
-    download_forecast forecast_file_4 "$FORECAST_FILE_4" ./inputs/forecast_file_4
-else
-    echo "forecast_file_4 not provided, skipping"
-fi
-
-echo "Contents of ./inputs/:"
-ls -la ./inputs/
-
-# Point the AVN forecast scalars at the downloaded forecast files
-if [ -n "$FORECAST_FILE_1" ]; then
-    set_config_scalar AVN_3 "$(realpath ./inputs/forecast_file_1)"
-fi
-if [ -n "$FORECAST_FILE_2" ]; then
-    set_config_scalar AVN_6 "$(realpath ./inputs/forecast_file_2)"
-fi
-if [ -n "$FORECAST_FILE_3" ]; then
-    set_config_scalar AVN_9 "$(realpath ./inputs/forecast_file_3)"
-fi
-
-# Run PGE on the edited local config copy
-python /app/josfra-pge/josfra_pge.py "$LOCAL_CONFIG" "$LOG_FILENAME"
+set +e
+"$JOSFRA_DOCKER" --pge_config "$CONFIG" \
+                 --primary_input "$L1C" \
+                 --secondary_input "$MOCCA" \
+                 "${FORECAST_ARGS[@]}" 2>&1 | tee "$LOG"
+rc=${PIPESTATUS[0]}
+set -e
+exit "$rc"

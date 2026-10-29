@@ -1,1 +1,0 @@
-#error expandvar() has moved into set_var.c

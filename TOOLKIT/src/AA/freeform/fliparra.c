@@ -1,1 +1,0 @@
-#error flip_array() has moved into makeindx.c
