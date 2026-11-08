@@ -1,18 +1,20 @@
-FROM almalinux:8
+# MAAP DPS image for the JOSFRA L2 PGE.
+#
+# The base image has the PGE, its Python env and its static files. MAAP runs
+# the run command /app/josfra-pge/josfra_spdc.sh, so this image adds the
+# repository at that path. It also adds the AWS CLI, which josfra_spdc.sh
+# uses to download the forecast files.
+#
+#   docker build --platform linux/amd64 --build-arg JOSFRA_TAG=v080016 \
+#       -t anaerobia/josfra:v080016-maap .
+#
+# JOSFRA_TAG selects the base image: v080016 (SPSS v08.00.16).
+ARG JOSFRA_TAG=v080016
+FROM docker.io/anaerobia/josfra:${JOSFRA_TAG}
 
-# Install Python and dependencies
-RUN dnf -y install python39 python39-pip \
-    && dnf clean all \
-    && rm -rf /var/cache/dnf
-# awscli: josfra_spdc.sh downloads the forecast files with `aws s3 cp`
-RUN pip3 install --no-cache-dir netCDF4 boto3 awscli
+RUN /opt/conda/bin/pip install --no-cache-dir awscli && \
+    ln -sf /opt/conda/bin/aws /usr/local/bin/aws && \
+    aws --version
 
-# josfra_spdc.sh invokes `python`; EL8 only provides `python3`
-RUN ln -sf /usr/bin/python3 /usr/bin/python
-
-# Copy algorithm code into /app/josfra-pge/
 COPY . /app/josfra-pge/
-
-# Make scripts executable
-RUN chmod +x /app/josfra-pge/josfra_spdc.sh \
-             /app/josfra-pge/build-env.sh
+RUN chmod +x /app/josfra-pge/josfra_spdc.sh /app/josfra-pge/build-env.sh

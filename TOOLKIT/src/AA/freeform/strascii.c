@@ -1,1 +1,0 @@
-#error strascii() has moved into setdbin.c

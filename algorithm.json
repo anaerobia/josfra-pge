@@ -1,0 +1,27 @@
+{
+  "algorithm_name": "josfra-v080016",
+  "algorithm_version": "main",
+  "algorithm_description": "AIRS L2 JOSFRA retrieval PGE (SPSS v08.00.16)",
+  "keywords": "airs, josfra, sounder",
+  "code_repository": "https://github.com/anaerobia/josfra-pge",
+  "author": "ali",
+  "run_command": "josfra-pge/josfra_spdc.sh",
+  "build_command": "josfra-pge/build-env.sh",
+  "algorithm_container_url": "docker.io/anaerobia/josfra:v080016-maap",
+  "ram_min": 32,
+  "cores_min": 8,
+  "outdir_max": 20,
+  "inputs": [
+    {"name": "config_file",     "label": "config_file",     "doc": "JOSFRA PGE config (XML) made by SPDC",           "type": "File"},
+    {"name": "log_filename",    "label": "log_filename",    "doc": "Log file name, written to ./output",             "type": "string"},
+    {"name": "l1c_file",        "label": "l1c_file",        "doc": "AIRS L1C granule (STAC item)",                   "type": "Directory"},
+    {"name": "mocca_file",      "label": "mocca_file",      "doc": "AIRS MOCCA L2 granule (.nc)",                    "type": "File"},
+    {"name": "forecast_file_1", "label": "forecast_file_1", "doc": "NCEP forecast file (s3:// URI)",                 "type": "string"},
+    {"name": "forecast_file_2", "label": "forecast_file_2", "doc": "NCEP forecast file (s3:// URI), or \"\"",        "type": "string"},
+    {"name": "forecast_file_3", "label": "forecast_file_3", "doc": "NCEP forecast file (s3:// URI), or \"\"",        "type": "string"},
+    {"name": "forecast_file_4", "label": "forecast_file_4", "doc": "NCEP forecast file (s3:// URI), or \"\"",        "type": "string"}
+  ],
+  "outputs": [
+    {"name": "out", "type": "Directory"}
+  ]
+}
