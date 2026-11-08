@@ -35,6 +35,12 @@ old code.
 | Build Command | `josfra-pge/build-env.sh` |
 | Container | `docker.io/anaerobia/josfra:v080016-maap` |
 
+The MAAP image makes `josfra_spdc.sh` the container ENTRYPOINT. DPS starts
+a job as `docker run <image> josfra-pge/josfra_spdc.sh <args>`. With the base
+image's ENTRYPOINT (`run_josfra.sh`), the run command was only an argument,
+and the job stopped with `Config file not found`. The wrapper ignores its own
+name when it is the first argument.
+
 To register, send `algorithm.json` to the MAAP build API from a MAAP
 Jupyter notebook:
 
@@ -54,7 +60,7 @@ print(r.status_code, r.text)
 | Input | Required | Description |
 |---|---|---|
 | `config_file` | yes | JOSFRA PGE config (XML) made by SPDC |
-| `l1c_file` | yes | AIRS L1C granule. A STAC directory or a file. |
+| `l1c_file` | yes | AIRS L1C granule. A STAC item (DPS gives a directory) or a file. For a directory, the wrapper uses the first `.nc`, `.hdf` or `.h5` file in it. |
 | `mocca_file` | yes | AIRS MOCCA L2 granule (`.nc`) |
 | `forecast_file_1` | yes | NCEP forecast file: an `s3://` URI or a local file |
 | `forecast_file_2` to `forecast_file_4` | no | More NCEP forecast files. Use `""` for no file. |

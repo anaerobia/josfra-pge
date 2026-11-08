@@ -33,6 +33,13 @@ unquote() {
     printf '%s' "$value"
 }
 
+# The MAAP image makes this script the ENTRYPOINT (see the Dockerfile). DPS
+# runs "docker run <image> josfra-pge/josfra_spdc.sh <args>", so the first
+# argument is then this script's own name. Drop it.
+if [ $# -gt 0 ] && [ "$(basename -- "$1")" = "josfra_spdc.sh" ]; then
+    shift
+fi
+
 CONFIG_FILE=""
 LOG_FILENAME=""
 L1C_FILE=""

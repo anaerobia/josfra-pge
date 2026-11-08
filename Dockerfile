@@ -18,3 +18,10 @@ RUN /opt/conda/bin/pip install --no-cache-dir awscli && \
 
 COPY . /app/josfra-pge/
 RUN chmod +x /app/josfra-pge/josfra_spdc.sh /app/josfra-pge/build-env.sh
+
+# DPS runs "docker run <image> josfra-pge/josfra_spdc.sh <args>". With the
+# base image's ENTRYPOINT (/usr/local/bin/run_josfra.sh) the run command is
+# only an argument: run_josfra.sh takes it as a config file name and stops
+# with "Config file not found". Make this repository's wrapper the
+# entrypoint.
+ENTRYPOINT ["/app/josfra-pge/josfra_spdc.sh"]
