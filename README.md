@@ -82,7 +82,38 @@ the script stops with an error.
 
 ## Outputs
 
-`./output` contains the product, its `.cas` metadata file and the log.
+`./output` contains the product, its `.cas` metadata file, the log and the
+STAC metadata:
+
+```
+output/catalog.json
+output/<ProductName without .nc>/<ProductName without .nc>.json   # STAC Item
+```
+
+After a successful PGE run, `josfra_spdc.sh` runs `make_stac.py` with
+`/opt/stac-env/bin/python` (pystac 1.10.1, STAC 1.0.0). It writes the files
+before DPS copies `./output` to S3. `make_stac.py` is a copy of the script
+in `github.com/anaerobia/mocca-pge`, changed for JOSFRA.
+
+- The item id is `ProductName` from the `.cas` file, without `.nc`.
+- The start and end times, `BuildId` and `ProcessingLevel` come from the
+  `.cas` file.
+- The footprint comes from the `lat` and `lon` variables in the product.
+  A granule that crosses the antimeridian gets a MultiPolygon.
+- The `.cas` fields in `EXTRA_KEYS` are copied as `josfra:<key>`, for example
+  `josfra:GranuleNumber` and `josfra:SubCollection`. A field that is not in
+  the `.cas` file is skipped. `FileLocation`, `NodeInfo` and `JobId` are not
+  copied.
+- The collection ID is the product's NetCDF `shortname` attribute, or
+  `JOSFRA_COLLECTION` if it is set.
+- Asset hrefs are relative unless `JOSFRA_ASSET_BASE` is set. DPS changes
+  them to `s3://` hrefs when it registers the item.
+
+To see every `.cas` key and NetCDF global attribute of a product:
+
+```bash
+/opt/stac-env/bin/python /app/josfra-pge/make_stac.py --dump output
+```
 
 ## Source
 
