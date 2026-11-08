@@ -35,6 +35,12 @@ old code.
 | Build Command | `josfra-pge/build-env.sh` |
 | Container | `docker.io/anaerobia/josfra:v080016-maap` |
 
+The MAAP image makes `josfra_spdc.sh` the container ENTRYPOINT. DPS starts
+a job as `docker run <image> josfra-pge/josfra_spdc.sh <args>`. With the base
+image's ENTRYPOINT (`run_josfra.sh`), the run command was only an argument,
+and the job stopped with `Config file not found`. The wrapper ignores its own
+name when it is the first argument.
+
 To register, send `algorithm.json` to the MAAP build API from a MAAP
 Jupyter notebook:
 
@@ -54,7 +60,7 @@ print(r.status_code, r.text)
 | Input | Required | Description |
 |---|---|---|
 | `config_file` | yes | JOSFRA PGE config (XML) made by SPDC |
-| `l1c_file` | yes | AIRS L1C granule. A STAC directory or a file. |
+| `l1c_file` | yes | AIRS L1C granule. A STAC item (DPS gives a directory) or a file. For a directory, the wrapper uses the first `.nc`, `.hdf` or `.h5` file in it. |
 | `mocca_file` | yes | AIRS MOCCA L2 granule (`.nc`) |
 | `forecast_file_1` | yes | NCEP forecast file: an `s3://` URI or a local file |
 | `forecast_file_2` to `forecast_file_4` | no | More NCEP forecast files. Use `""` for no file. |
@@ -76,7 +82,38 @@ the script stops with an error.
 
 ## Outputs
 
-`./output` contains the product, its `.cas` metadata file and the log.
+`./output` contains the product, its `.cas` metadata file, the log and the
+STAC metadata:
+
+```
+output/catalog.json
+output/<ProductName without .nc>/<ProductName without .nc>.json   # STAC Item
+```
+
+After a successful PGE run, `josfra_spdc.sh` runs `make_stac.py` with
+`/opt/stac-env/bin/python` (pystac 1.10.1, STAC 1.0.0). It writes the files
+before DPS copies `./output` to S3. `make_stac.py` is a copy of the script
+in `github.com/anaerobia/mocca-pge`, changed for JOSFRA.
+
+- The item id is `ProductName` from the `.cas` file, without `.nc`.
+- The start and end times, `BuildId` and `ProcessingLevel` come from the
+  `.cas` file.
+- The footprint comes from the `lat` and `lon` variables in the product.
+  A granule that crosses the antimeridian gets a MultiPolygon.
+- The `.cas` fields in `EXTRA_KEYS` are copied as `josfra:<key>`, for example
+  `josfra:GranuleNumber` and `josfra:SubCollection`. A field that is not in
+  the `.cas` file is skipped. `FileLocation`, `NodeInfo` and `JobId` are not
+  copied.
+- The collection ID is the product's NetCDF `shortname` attribute, or
+  `JOSFRA_COLLECTION` if it is set.
+- Asset hrefs are relative unless `JOSFRA_ASSET_BASE` is set. DPS changes
+  them to `s3://` hrefs when it registers the item.
+
+To see every `.cas` key and NetCDF global attribute of a product:
+
+```bash
+/opt/stac-env/bin/python /app/josfra-pge/make_stac.py --dump output
+```
 
 ## Source
 

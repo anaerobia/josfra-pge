@@ -16,7 +16,8 @@
 # URI to ./inputs with its own file name: josfra_docker.sh matches each
 # forecast to the config by the valid time and forecast hour in that name.
 #
-# The product, the .cas file and the log go in ./output.
+# The product, the .cas file and the log go in ./output. After a successful
+# run, make_stac.py writes a STAC catalog and item for the product there.
 #
 set -euo pipefail
 
@@ -32,6 +33,13 @@ unquote() {
     value="${value#\'}"; value="${value%\'}"
     printf '%s' "$value"
 }
+
+# The MAAP image makes this script the ENTRYPOINT (see the Dockerfile). DPS
+# runs "docker run <image> josfra-pge/josfra_spdc.sh <args>", so the first
+# argument is then this script's own name. Drop it.
+if [ $# -gt 0 ] && [ "$(basename -- "$1")" = "josfra_spdc.sh" ]; then
+    shift
+fi
 
 CONFIG_FILE=""
 LOG_FILENAME=""
@@ -117,4 +125,20 @@ set +e
                  "${FORECAST_ARGS[@]}" 2>&1 | tee "$LOG"
 rc=${PIPESTATUS[0]}
 set -e
-exit "$rc"
+if [ "$rc" -ne 0 ]; then
+    exit "$rc"
+fi
+
+# Write the STAC catalog and item for the product in $OUTPUT_DIR, before DPS
+# copies ./output to S3. make_stac.py needs pystac, which is in
+# /opt/stac-env (see the Dockerfile).
+if [ -z "${STAC_PYTHON:-}" ]; then
+    if [ -x /opt/stac-env/bin/python ]; then
+        STAC_PYTHON=/opt/stac-env/bin/python
+    else
+        STAC_PYTHON=python3
+    fi
+fi
+echo "josfra-pge: writing STAC metadata with $STAC_PYTHON"
+"$STAC_PYTHON" "$(dirname "$0")/make_stac.py" "$OUTPUT_DIR" ||
+    die "STAC metadata generation failed"
