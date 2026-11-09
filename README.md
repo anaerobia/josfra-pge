@@ -86,11 +86,21 @@ the script stops with an error.
 STAC metadata:
 
 ```
+output/<ProductName>                                              # product
+output/<ProductName>.cas
+output/josfra.log
 output/catalog.json
 output/<ProductName without .nc>/<ProductName without .nc>.json   # STAC Item
 ```
 
-After a successful PGE run, `josfra_spdc.sh` runs `make_stac.py` with
+The PGE writes a temporary name, for example `SNDR.AQUA.JOSFRA.101.nc`. On
+a SIPS host, SPDC archives the product under the `ProductName` in its
+`.cas` file. In DPS, `josfra_spdc.sh` renames the product and its `.cas`
+file to `ProductName` after the PGE run. If the `.cas` file has no
+`ProductName`, the file keeps its name. If a file with the new name exists,
+the job stops.
+
+After the rename, `josfra_spdc.sh` runs `make_stac.py` with
 `/opt/stac-env/bin/python` (pystac 1.10.1, STAC 1.0.0). It writes the files
 before DPS copies `./output` to S3. `make_stac.py` is a copy of the script
 in `github.com/anaerobia/mocca-pge`, changed for JOSFRA.
@@ -98,8 +108,10 @@ in `github.com/anaerobia/mocca-pge`, changed for JOSFRA.
 - The item id is `ProductName` from the `.cas` file, without `.nc`.
 - The start and end times, `BuildId` and `ProcessingLevel` come from the
   `.cas` file.
-- The footprint comes from the `lat` and `lon` variables in the product.
-  A granule that crosses the antimeridian gets a MultiPolygon.
+- The footprint comes from the `geospatial_*` attributes, or from the `lat`
+  and `lon` variables in the product. A granule that crosses the
+  antimeridian gets a MultiPolygon. A granule that reaches latitude 90 or
+  -90 contains a pole, so it gets longitudes -180 to 180.
 - The `.cas` fields in `EXTRA_KEYS` are copied as `josfra:<key>`, for example
   `josfra:GranuleNumber` and `josfra:SubCollection`. A field that is not in
   the `.cas` file is skipped. `FileLocation`, `NodeInfo` and `JobId` are not

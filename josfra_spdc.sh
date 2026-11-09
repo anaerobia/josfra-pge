@@ -129,9 +129,8 @@ if [ "$rc" -ne 0 ]; then
     exit "$rc"
 fi
 
-# Write the STAC catalog and item for the product in $OUTPUT_DIR, before DPS
-# copies ./output to S3. make_stac.py needs pystac, which is in
-# /opt/stac-env (see the Dockerfile).
+# make_stac.py and the rename below use /opt/stac-env, which has pystac
+# (see the Dockerfile).
 if [ -z "${STAC_PYTHON:-}" ]; then
     if [ -x /opt/stac-env/bin/python ]; then
         STAC_PYTHON=/opt/stac-env/bin/python
@@ -139,6 +138,43 @@ if [ -z "${STAC_PYTHON:-}" ]; then
         STAC_PYTHON=python3
     fi
 fi
+
+# cas_product_name <cas> -- print the ProductName value of a .cas file, or
+# nothing if the file has no ProductName.
+cas_product_name() {
+    "$STAC_PYTHON" - "$1" <<'EOF'
+import sys
+import xml.etree.ElementTree as ET
+for kv in ET.parse(sys.argv[1]).getroot().iter("keyval"):
+    if (kv.findtext("key") or "").strip() == "ProductName":
+        print((kv.findtext("val") or "").strip())
+        break
+EOF
+}
+
+# The PGE writes temporary names (for example SNDR.AQUA.JOSFRA.101.nc). On a
+# SIPS host, SPDC archives the product under the ProductName in its .cas
+# file. DPS copies ./output as it is, so rename each product and its .cas
+# file to ProductName here.
+for cas in "$OUTPUT_DIR"/*.cas; do
+    [ -f "$cas" ] || continue
+    product="${cas%.cas}"
+    [ -f "$product" ] || continue
+    name=$(cas_product_name "$cas") || die "cannot read $cas"
+    if [ -z "$name" ]; then
+        echo "josfra-pge: no ProductName in $cas: not renamed"
+        continue
+    fi
+    [ "$name" = "$(basename "$name")" ] || die "ProductName is not a file name: $name"
+    [ "$(basename "$product")" != "$name" ] || continue
+    [ ! -e "$OUTPUT_DIR/$name" ] || die "cannot rename $product: $OUTPUT_DIR/$name exists"
+    echo "josfra-pge: rename $(basename "$product") -> $name"
+    mv "$product" "$OUTPUT_DIR/$name"
+    mv "$cas" "$OUTPUT_DIR/$name.cas"
+done
+
+# Write the STAC catalog and item for the product in $OUTPUT_DIR, before DPS
+# copies ./output to S3.
 echo "josfra-pge: writing STAC metadata with $STAC_PYTHON"
 "$STAC_PYTHON" "$(dirname "$0")/make_stac.py" "$OUTPUT_DIR" ||
     die "STAC metadata generation failed"
