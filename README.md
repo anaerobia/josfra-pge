@@ -9,16 +9,17 @@ commands, and a Dockerfile that adds this repository to that image at
 
 | SPSS | Base image | MAAP image | Registration |
 |---|---|---|---|
-| v08.00.16 (branch `SIPS-2922/MOCCA-JOSFRA-Docker`, 2026-11-08) | `anaerobia/josfra:spss261108` | `anaerobia/josfra:spss261108-maap` | `algorithm.json` (`josfra-spss261108`) |
+| development (`b739bdc36`, 2026-11-10) | `anaerobia/josfra:spss261110` | `anaerobia/josfra:spss261110-maap` | `algorithm.json` (`josfra-spss261110`) |
+| v08.00.16 (branch `SIPS-2922/MOCCA-JOSFRA-Docker`, 2026-11-08) | `anaerobia/josfra:spss261108` | `anaerobia/josfra:spss261108-maap` | `josfra-spss261108` |
 | v08.00.16 | `anaerobia/josfra:v080016` | `anaerobia/josfra:v080016-maap` | `josfra-v080016` (earlier image; does not run in DPS) |
 
 Build the `-maap` image on `sleet2`. First, build and test the base image
 there (RUNBOOK steps 7.2 to 7.5):
 
 ```bash
-docker build --platform linux/amd64 --build-arg JOSFRA_TAG=spss261108 \
-    -t anaerobia/josfra:spss261108-maap .
-docker push anaerobia/josfra:spss261108-maap
+docker build --platform linux/amd64 --build-arg JOSFRA_TAG=spss261110 \
+    -t anaerobia/josfra:spss261110-maap .
+docker push anaerobia/josfra:spss261110-maap
 ```
 
 The full release procedure (build, tests, the two pushes, registration and
@@ -34,7 +35,7 @@ old code.
 | Repository URL | `https://github.com/anaerobia/josfra-pge` |
 | Run Command | `josfra-pge/josfra_spdc.sh` |
 | Build Command | `josfra-pge/build-env.sh` |
-| Container | `docker.io/anaerobia/josfra:spss261108-maap` |
+| Container | `docker.io/anaerobia/josfra:spss261110-maap` |
 
 The MAAP image makes `josfra_spdc.sh` the container ENTRYPOINT. DPS starts
 a job as `docker run <image> josfra-pge/josfra_spdc.sh <args>`. With the base

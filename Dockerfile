@@ -6,12 +6,12 @@
 # uses to download the forecast files, and /opt/stac-env with pystac for
 # make_stac.py.
 #
-#   docker build --platform linux/amd64 --build-arg JOSFRA_TAG=spss261108 \
-#       -t anaerobia/josfra:spss261108-maap .
+#   docker build --platform linux/amd64 --build-arg JOSFRA_TAG=spss261110 \
+#       -t anaerobia/josfra:spss261110-maap .
 #
-# JOSFRA_TAG selects the base image: spss261108 (SPSS v08.00.16, built from
-# SPSS branch SIPS-2922/MOCCA-JOSFRA-Docker on 2026-11-08) or v080016.
-ARG JOSFRA_TAG=spss261108
+# JOSFRA_TAG selects the base image: spss261110 (SPSS development b739bdc36,
+# built on 2026-11-10), spss261108 or v080016.
+ARG JOSFRA_TAG=spss261110
 FROM docker.io/anaerobia/josfra:${JOSFRA_TAG}
 
 RUN /opt/conda/bin/pip install --no-cache-dir awscli && \
