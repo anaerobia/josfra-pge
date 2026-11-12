@@ -170,7 +170,8 @@ has a value wins (see first()). To adapt the script to another product:
    Optional fields (id, version, level, the provider date and everything in
    EXTRA_KEYS) are left out when nothing matches.
 
-EXTRA_KEYS are copied verbatim into item properties as "josfra:<key>".
+EXTRA_KEYS are copied verbatim into item properties as "josfra:<key>",
+except that INTEGER_KEYS values are written as JSON numbers.
 FileLocation, NodeInfo, JobId, TaskId and RequestId are left out on
 purpose: they record internal hostnames and paths that should not be
 published.
@@ -244,6 +245,10 @@ EXTRA_KEYS = ["MAAPBatchTag", "MAAPQueue", "MAAPProcessId",
               "ProductionDateTime", "AutomaticQualityFlag",
               "ProductionLocation"]
 
+# EXTRA_KEYS written as JSON numbers, not strings. A value that is not an
+# integer stays a string.
+INTEGER_KEYS = {"MAAPManagerJobIndex"}
+
 Meta = dict[str, Any]
 BBox = tuple[float, float, float, float]
 
@@ -271,6 +276,15 @@ def read_cas(path: str) -> Meta:
         if key:
             met[key] = vals[0] if len(vals) == 1 else (vals or None)
     return met
+
+
+def to_int(key: str, v: Any) -> Any:
+    """Return v as an int, or v unchanged (with a warning) if it is not one."""
+    try:
+        return int(str(v).strip())
+    except ValueError:
+        warn(f"{key} is not an integer, kept as a string: {v!r}")
+        return v
 
 
 def clean(v: Any) -> Any:
@@ -609,8 +623,11 @@ def build_properties(meta: Meta, context: Meta) -> Meta:
         props["processing:software"] = {"JOSFRA_PGE": str(version)}
     for k in EXTRA_KEYS:
         v = clean(meta.get(k))
-        if v is not None:
-            props[f"josfra:{k}"] = v
+        if v is None:
+            continue
+        if k in INTEGER_KEYS:
+            v = to_int(k, v)
+        props[f"josfra:{k}"] = v
     image = container_image(context)
     if image:
         props["josfra:container_image"] = image
