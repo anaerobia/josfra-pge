@@ -139,34 +139,72 @@ if [ -z "${STAC_PYTHON:-}" ]; then
     fi
 fi
 
-# cas_product_name <cas> -- print the ProductName value of a .cas file, or
-# nothing if the file has no ProductName.
-cas_product_name() {
+# cas_names <cas> -- print two lines from a .cas file: the ProductName value
+# and the base name of the Filename value. A missing key gives an empty line.
+# The PGE does not escape XML special characters in .cas values, so fall
+# back to a plain text search if the file does not parse as XML.
+cas_names() {
     "$STAC_PYTHON" - "$1" <<'EOF'
+import os
+import re
 import sys
 import xml.etree.ElementTree as ET
-for kv in ET.parse(sys.argv[1]).getroot().iter("keyval"):
-    if (kv.findtext("key") or "").strip() == "ProductName":
-        print((kv.findtext("val") or "").strip())
-        break
+
+path = sys.argv[1]
+values = {}
+try:
+    for kv in ET.parse(path).getroot().iter():
+        if not kv.tag.endswith("keyval"):
+            continue
+        key = (kv.findtext("key") or "").strip()
+        values.setdefault(key, (kv.findtext("val") or "").strip())
+except ET.ParseError as err:
+    print(f"josfra-pge: {path} is not valid XML ({err}); searching it as text",
+          file=sys.stderr)
+    text = open(path, encoding="utf-8", errors="replace").read()
+    pattern = r"<key>\s*([^<]*?)\s*</key>\s*<val>\s*([^<]*?)\s*</val>"
+    for key, val in re.findall(pattern, text):
+        values.setdefault(key, val)
+print(values.get("ProductName", ""))
+print(os.path.basename(values.get("Filename", "")))
 EOF
 }
 
-# The PGE writes temporary names (for example SNDR.AQUA.JOSFRA.101.nc). On a
-# SIPS host, SPDC archives the product under the ProductName in its .cas
-# file. DPS copies ./output as it is, so rename each product and its .cas
-# file to ProductName here.
-for cas in "$OUTPUT_DIR"/*.cas; do
-    [ -f "$cas" ] || continue
-    product="${cas%.cas}"
-    [ -f "$product" ] || continue
-    name=$(cas_product_name "$cas") || die "cannot read $cas"
+# The PGE writes temporary names (for example SNDR.AQUA.JOSFRA.101.nc and
+# SNDR.AQUA.JOSFRA.101.nc.cas). On a SIPS host, SPDC archives the product
+# under the ProductName in its .cas file. DPS copies ./output as it is, so
+# rename each product and its .cas file to ProductName here. The product is
+# the file named by Filename in the .cas file, or else the .cas file name
+# without ".cas".
+echo "josfra-pge: files in $OUTPUT_DIR:"
+ls -l "$OUTPUT_DIR"
+shopt -s nullglob
+cas_files=("$OUTPUT_DIR"/*.cas)
+shopt -u nullglob
+[ ${#cas_files[@]} -gt 0 ] || echo "josfra-pge: no .cas file in $OUTPUT_DIR: nothing renamed"
+for cas in ${cas_files[@]+"${cas_files[@]}"}; do
+    names=$(cas_names "$cas") || die "cannot read $cas"
+    name=$(printf '%s\n' "$names" | sed -n 1p)
+    filename=$(printf '%s\n' "$names" | sed -n 2p)
+    product=""
+    if [ -n "$filename" ] && [ -f "$OUTPUT_DIR/$filename" ]; then
+        product="$OUTPUT_DIR/$filename"
+    elif [ -f "${cas%.cas}" ]; then
+        product="${cas%.cas}"
+    fi
+    if [ -z "$product" ]; then
+        echo "josfra-pge: no product for $(basename "$cas") (Filename '$filename'): not renamed"
+        continue
+    fi
     if [ -z "$name" ]; then
-        echo "josfra-pge: no ProductName in $cas: not renamed"
+        echo "josfra-pge: no ProductName in $(basename "$cas"): not renamed"
         continue
     fi
     [ "$name" = "$(basename "$name")" ] || die "ProductName is not a file name: $name"
-    [ "$(basename "$product")" != "$name" ] || continue
+    if [ "$(basename "$product")" = "$name" ]; then
+        echo "josfra-pge: $name already has its ProductName"
+        continue
+    fi
     [ ! -e "$OUTPUT_DIR/$name" ] || die "cannot rename $product: $OUTPUT_DIR/$name exists"
     echo "josfra-pge: rename $(basename "$product") -> $name"
     mv "$product" "$OUTPUT_DIR/$name"
