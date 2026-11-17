@@ -247,7 +247,7 @@ EXTRA_KEYS = ["MAAPBatchTag", "MAAPQueue", "MAAPProcessId",
 
 # EXTRA_KEYS written as JSON numbers, not strings. A value that is not an
 # integer stays a string.
-INTEGER_KEYS = {"MAAPManagerJobIndex"}
+INTEGER_KEYS = {"MAAPManagerJobIndex", "GranuleNumber"}
 
 Meta = dict[str, Any]
 BBox = tuple[float, float, float, float]
