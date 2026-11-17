@@ -98,9 +98,12 @@ output/<ProductName without .nc>/<ProductName without .nc>.json   # STAC Item
 The PGE writes a temporary name, for example `SNDR.AQUA.JOSFRA.101.nc`. On
 a SIPS host, SPDC archives the product under the `ProductName` in its
 `.cas` file. In DPS, `josfra_spdc.sh` renames the product and its `.cas`
-file to `ProductName` after the PGE run. If the `.cas` file has no
-`ProductName`, the file keeps its name. If a file with the new name exists,
-the job stops.
+file to `ProductName` after the PGE run. It also sets the file name in the
+`Filename` value of the `.cas` file to `ProductName`, as in a MOCCA `.cas`
+file (any directory part is kept). Thus `josfra:Filename` in the STAC item
+is the product name, not `SNDR.AQUA.JOSFRA.101.nc`. If the `.cas` file has
+no `ProductName`, the file keeps its name. If a file with the new name
+exists, the job stops.
 
 After the rename, `josfra_spdc.sh` runs `make_stac.py` with
 `/opt/stac-env/bin/python` (pystac 1.10.1, STAC 1.0.0). It writes the files

@@ -170,10 +170,40 @@ print(os.path.basename(values.get("Filename", "")))
 EOF
 }
 
+# set_cas_filename <cas> <name> -- set the file name part of the Filename
+# value in a .cas file to <name>, and keep any directory part. The edit is
+# done on the text, so the rest of the file does not change, and a file that
+# is not valid XML (see cas_names) can also be edited. A .cas file without
+# Filename is not changed.
+set_cas_filename() {
+    "$STAC_PYTHON" - "$1" "$2" <<'EOF'
+import re
+import sys
+
+path, name = sys.argv[1], sys.argv[2]
+with open(path, encoding="utf-8", errors="surrogateescape") as f:
+    text = f.read()
+pattern = re.compile(r"(<key>\s*Filename\s*</key>\s*<val>\s*)([^<]*?)(\s*</val>)")
+match = pattern.search(text)
+if match is None:
+    print(f"josfra-pge: no Filename in {path}: not changed")
+    sys.exit(0)
+old = match.group(2)
+new = old[:old.rfind("/") + 1] + name
+if new == old:
+    sys.exit(0)
+text = text[:match.start(2)] + new + text[match.end(2):]
+with open(path, "w", encoding="utf-8", errors="surrogateescape") as f:
+    f.write(text)
+print(f"josfra-pge: Filename in {path}: {old} -> {new}")
+EOF
+}
+
 # The PGE writes temporary names (for example SNDR.AQUA.JOSFRA.101.nc and
 # SNDR.AQUA.JOSFRA.101.nc.cas). On a SIPS host, SPDC archives the product
 # under the ProductName in its .cas file. DPS copies ./output as it is, so
-# rename each product and its .cas file to ProductName here. The product is
+# rename each product and its .cas file to ProductName here, and set Filename
+# in the .cas file to the new name (as in a MOCCA .cas file). The product is
 # the file named by Filename in the .cas file, or else the .cas file name
 # without ".cas".
 echo "josfra-pge: files in $OUTPUT_DIR:"
@@ -209,6 +239,8 @@ for cas in ${cas_files[@]+"${cas_files[@]}"}; do
     echo "josfra-pge: rename $(basename "$product") -> $name"
     mv "$product" "$OUTPUT_DIR/$name"
     mv "$cas" "$OUTPUT_DIR/$name.cas"
+    set_cas_filename "$OUTPUT_DIR/$name.cas" "$name" ||
+        die "cannot set Filename in $OUTPUT_DIR/$name.cas"
 done
 
 # Write the STAC catalog and item for the product in $OUTPUT_DIR, before DPS
